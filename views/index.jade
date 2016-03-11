@@ -1,0 +1,57 @@
+extends layout
+
+block scripts
+  //script(src='/javascripts/dark-unica.js')
+  script(src='/javascripts/index.js')
+
+block content
+    h1= title
+    div.row
+        #container.col-md-12
+    div.row
+        div.col-md-4
+            h3 Dólar Set-FX
+        div.col-md-4
+            h3 Cierre
+            span#price
+            span#priceChange(aria-hidden='true')
+        div.col-md-4
+            h3 Promedio
+            span#avgPrice
+            span#avgPriceChange(aria-hidden='true')
+    div.row
+        div.col-md-6
+            h4.box-title Precios del dólar
+            dl.dl-horizontal
+                dt TRM:
+                dd
+                    span#trm
+                    span#trmPriceChange(aria-hidden='true')
+                dt Apertura:
+                dd
+                    span#openPrice
+                    span#openPriceChange(aria-hidden='true')
+                dt Mínimo:
+                dd
+                    span#minPrice
+                    span#minPriceChange(aria-hidden='true')
+                dt Máximo:
+                dd
+                    span#maxPrice
+                    span#maxPriceChange(aria-hidden='true')
+        div.col-md-6
+            h4.box-title Montos USD
+            dl.dl-horizontal
+                dt Negociado:
+                dd#totalAmmount
+                dt Último:
+                dd#latestAmmount
+                dt Promedio:
+                dd#avgAmmount
+                dt Mínimo:
+                dd#minAmmount
+                dt Máximo:
+                dd#maxAmmount
+                dt Transacciones:
+                dd#transactions
+    button#button Refresh

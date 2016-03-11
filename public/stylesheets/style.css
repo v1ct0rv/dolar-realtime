@@ -1,0 +1,19 @@
+body {
+  padding: 50px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+}
+
+a {
+  color: #00B7FF;
+}
+
+#container {
+    min-width: 310px; 
+    height: 
+    400px; 
+    margin: 0 auto;
+}
+
+.box-title {
+    border-bottom: #666666 solid 1px;
+}
