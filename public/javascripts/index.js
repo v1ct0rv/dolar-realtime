@@ -158,7 +158,7 @@ $(function() {
     updateData(false);
 
     // Update Data every 10 seconds
-    setTimeout(function() {
+    setInterval(function() {
         updateData(true);
     }, 10000);
 
