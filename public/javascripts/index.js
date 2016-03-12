@@ -6,9 +6,6 @@ function loadData(url, callback) {
     }).done(callback).fail(function(jqXHR, textStatus, errorThrown) {
         var err = textStatus + ", " + errorThrown;
         console.log("Request Failed: " + err);
-        debugger;
-        var data = jqXHR.responseText;
-        alert(data);
     });
 }
 
