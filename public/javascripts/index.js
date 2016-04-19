@@ -17,13 +17,48 @@ function loadStats(callback) {
     loadData('/setfx/stats?callback=?', callback);
 }
 
+function loadBrentOil(callback) {
+    loadData('/investing/brentOil?callback=?', callback);
+}
+
 function updateData(isUpdate) {
     loadAllStats(function(data, textStatus, jqXHR) {
         if (isUpdate) {
             $('#container').highcharts().series[0].setData(data.monto);
             $('#container').highcharts().series[1].setData(data.precio);
         } else {
-            loadChart(data);
+            loadDolarChart(data);
+        }
+    });
+
+    loadBrentOil(function(data, textStatus, jqXHR) {
+        // Set Data
+        $("#cierreOil").text(data.attr.last_close_value);
+        $("#priceOil").text(data.attr.last_value);
+
+        // Show difference
+        var difference = parseFloat(data.attr.last_value-data.attr.last_close_value).toFixed(2);
+        if (difference > 0) {
+            $("#priceOil").text($("#priceOil").text() + ' +' + difference);
+        } else {
+            $("#priceOil").text($("#priceOil").text() + difference);
+        }
+
+        // Show variation
+        var variation = parseFloat((1-(data.attr.last_close_value/data.attr.last_value))*100).toFixed(2);
+        if (variation > 0) {
+            $("#priceOil").text($("#priceOil").text() + '   (+' + variation + '%)');
+        } else {
+            $("#priceOil").text($("#priceOil").text() + '   (' + variation + '%)');
+        }
+
+        
+
+        // Set Chart
+        if (isUpdate) {
+            $('#container-brent').highcharts().series[0].setData(data.candles);
+        } else {
+            loadBrentChart(data);
         }
     });
 
@@ -59,7 +94,7 @@ function isIconIndicator(key) {
     return false;
 }
 
-function loadChart(data) {
+function loadDolarChart(data) {
     $('#container').highcharts({
         chart: {
             zoomType: 'xy'
@@ -136,6 +171,94 @@ function loadChart(data) {
             name: 'Precio',
             type: 'spline',
             data: data.precio,
+            tooltip: {
+                valuePrefix: '$'
+            },
+            //pointInterval: 900 * 1000 // quince minutes
+        }]
+    });
+}
+
+function loadBrentChart(data) {
+    $('#container-brent').highcharts({
+        chart: {
+            zoomType: 'x'
+        },
+        title: {
+            text: 'Petróleo Brent'
+        },
+        subtitle: {
+            text: 'Fuente: http://es.investing.com/commodities/brent-oil'
+        },
+        xAxis: {
+            title: {
+                enabled: true,
+                text: 'Hours of the Day'
+            },
+            type: 'datetime',
+            dateTimeLabelFormats: {
+                hour: '%H:%M'
+            },
+            //tickInterval: 900 * 1000 // quince minutes
+        },
+        yAxis: [{
+            labels: { // Primary yAxis
+                format: '{value}',
+                style: {
+                    color: Highcharts.getOptions().colors[1]
+                }
+            },
+            title: {
+                text: 'Precio',
+                style: {
+                    color: Highcharts.getOptions().colors[1]
+                }
+            },
+            opposite: true
+                //max: 3250
+        }],
+        tooltip: {
+            shared: true
+        },
+        legend: {
+            layout: 'vertical',
+            align: 'left',
+            x: 120,
+            verticalAlign: 'top',
+            y: 100,
+            floating: true,
+            backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColor) || '#FFFFFF'
+        },
+        plotOptions: {
+            area: {
+                fillColor: {
+                    linearGradient: {
+                        x1: 0,
+                        y1: 0,
+                        x2: 0,
+                        y2: 1
+                    },
+                    stops: [
+                        [0, Highcharts.getOptions().colors[0]],
+                        [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
+                    ]
+                },
+                marker: {
+                    radius: 2
+                },
+                lineWidth: 1,
+                states: {
+                    hover: {
+                        lineWidth: 1
+                    }
+                },
+                threshold: null
+            }
+        },
+        series: [{
+            name: 'Precio',
+            type: 'area',
+            data: data.candles,
             tooltip: {
                 valuePrefix: '$'
             },
