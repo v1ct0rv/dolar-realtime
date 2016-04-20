@@ -39,17 +39,21 @@ function updateData(isUpdate) {
         // Show difference
         var difference = parseFloat(data.attr.last_value-data.attr.last_close_value).toFixed(2);
         if (difference > 0) {
-            $("#priceOil").text($("#priceOil").text() + ' +' + difference);
+            $("#priceOilChange").text(' +' + difference);
+            $("#priceOilChange").attr('class', 'bg-success');
         } else {
-            $("#priceOil").text($("#priceOil").text() + difference);
+            $("#priceOilChange").text(difference);
+            $("#priceOilChange").attr('class', 'bg-danger');
         }
 
         // Show variation
         var variation = parseFloat((1-(data.attr.last_close_value/data.attr.last_value))*100).toFixed(2);
         if (variation > 0) {
-            $("#priceOil").text($("#priceOil").text() + '   (+' + variation + '%)');
+            $("#priceOilVariation").text('   (+' + variation + '%)');
+            $("#priceOilVariation").attr('class', 'bg-success');
         } else {
-            $("#priceOil").text($("#priceOil").text() + '   (' + variation + '%)');
+            $("#priceOilVariation").text('   (' + variation + '%)');
+            $("#priceOilVariation").attr('class', 'bg-danger');
         }
 
         
