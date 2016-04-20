@@ -32,6 +32,15 @@ function updateData(isUpdate) {
     });
 
     loadBrentOil(function(data, textStatus, jqXHR) {
+
+        for (var m in data.events) {
+            for (var g in data.events[m]) {
+                evento = data.events[m][g];
+                evento.text = evento.text.replace("VAR_TIMESTAMP", '').replace("href=\"", 'href=\"http://es.investing.com')
+            };
+        }
+                    
+                
         // Set Data
         $("#cierreOil").text(data.attr.last_close_value);
         $("#priceOil").text(data.attr.last_value);
@@ -101,7 +110,7 @@ function isIconIndicator(key) {
 function loadDolarChart(data) {
     $('#container').highcharts({
         chart: {
-            zoomType: 'xy'
+            zoomType: 'x'
         },
         title: {
             text: 'Dólar Spot'
@@ -262,12 +271,30 @@ function loadBrentChart(data) {
         series: [{
             name: 'Precio',
             type: 'area',
+            id : 'dataseries',
             data: data.candles,
             tooltip: {
                 valuePrefix: '$'
-            },
+            }
             //pointInterval: 900 * 1000 // quince minutes
-        }]
+        }, {
+            name: 'Eventos',
+            type : 'flags',
+            data : data.events.news,
+            zIndex: 10,
+            onSeries : 'dataseries',
+            shape : 'circlepin',
+            width : 16
+        }, {
+            type: "flags",
+            onSeries: "dataseries",
+            shape: "circlepin",
+            data: data.events.ec,
+            zIndex: 11
+        }],
+        tooltip: {
+            useHTML: true
+        }
     });
 }
 

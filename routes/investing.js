@@ -1,5 +1,6 @@
 var express = require('express');
 var request = require('request');
+var _ = require('underscore');
 var router = express.Router();
 
 /* GET brentOil listing from http://es.investing.com/commodities/brent-oil. */
@@ -13,10 +14,20 @@ router.get('/brentOil', function(req, res, next) {
       }
     };
 
-    request(options, function(error, response, data) {
+    request(options, function(error, response, html) {
         if (!error) {
-            var json = JSON.parse(data);
-            res.jsonp(json);
+            var data = JSON.parse(html);
+
+            // Sort the data to avoid http://www.highcharts.com/errors/15
+            if(data.candles) {
+                data.candles = _.sortBy(data.candles, function(arr) { return arr[0]; });
+            }
+
+            if(data.events && data.events.news) {
+                data.events.news = _.sortBy(data.events.news, function(o) { return o.x; });
+            }
+
+            res.jsonp(data);
             // json.forEach(function (element, index, array) {
             //     element= JSON.parse(element)
             //     data.precio.push([element.t, parseFloat(element.p)]);
