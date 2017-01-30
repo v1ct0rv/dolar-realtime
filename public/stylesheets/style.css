@@ -7,10 +7,9 @@ a {
   color: #00B7FF;
 }
 
-#container {
+#container, #container-brent {
     min-width: 310px; 
-    height: 
-    400px; 
+    height: 400px; 
     margin: 0 auto;
 }
 
