@@ -36,7 +36,8 @@ router.get('/brentOil', function(req, res, next) {
             // //console.log(json);
             // res.jsonp(data);
         } else {
-            res.send(500, 'The url <strong>' + options.url + '</strong> cannot be contacted, error: <br/> <strong>' + error + '</strong>');
+            console.error("Error on request: " + url + "Error: " + error);
+            res.status(500).send('The url <strong>' + options.url + '</strong> cannot be contacted, error: <br/> <strong>' + error + '</strong>');
         }
     });
 });

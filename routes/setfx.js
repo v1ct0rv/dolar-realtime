@@ -20,7 +20,8 @@ router.get('/allStats', function(req, res, next) {
             //console.log(json);
             res.jsonp(data);
         } else {
-            res.send(500, 'The url <strong>' + url + '</strong> cannot be contacted, error: <br/> <strong>' + error + '</strong>');
+            console.error("Error on request: " + url + "Error: " + error);
+            res.status(500).send('The url <strong>' + url + '</strong> cannot be contacted, error: <br/> <strong>' + error + '</strong>');
         }
     });
 });
@@ -32,7 +33,8 @@ router.get('/stats', function(req, res, next) {
             var json = JSON.parse(html);
             res.jsonp(json);
         } else {
-            res.send(500, 'The url <strong>' + url + '</strong> cannot be contacted, error: <br/> <strong>' + error + '</strong>');
+            console.error("Error on request: " + url + "Error: " + error);
+            res.status(500).send('The url <strong>' + url + '</strong> cannot be contacted, error: <br/> <strong>' + error + '</strong>');
         }
     });
 });
