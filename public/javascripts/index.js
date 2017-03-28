@@ -22,6 +22,8 @@ function loadBrentOil(callback) {
 }
 
 function updateData(isUpdate) {
+    // track page refresh
+    ga('send', 'event', 'data', 'updateData', 'Data Refresh');
     loadAllStats(function(data, textStatus, jqXHR) {
         if (isUpdate) {
             $('#container').highcharts().series[0].setData(data.monto);
@@ -39,8 +41,8 @@ function updateData(isUpdate) {
                 evento.text = evento.text.replace("VAR_TIMESTAMP", '').replace("href=\"", 'href=\"http://es.investing.com')
             };
         }
-                    
-                
+
+
         // Set Data
         $("#cierreOil").text(data.attr.last_close_value);
         $("#priceOil").text(data.attr.last_value);
@@ -65,7 +67,7 @@ function updateData(isUpdate) {
             $("#priceOilVariation").attr('class', 'bg-danger');
         }
 
-        
+
 
         // Set Chart
         if (isUpdate) {
