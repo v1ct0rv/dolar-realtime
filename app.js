@@ -9,6 +9,8 @@ var routes = require('./routes/index');
 var users = require('./routes/users');
 var setfx = require('./routes/setfx');
 var investing = require('./routes/investing');
+var worker = require('./worker');
+var schedule = require('node-schedule');
 
 var app = express();
 
@@ -23,6 +25,12 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+var commonData = function (req, res, next) {
+  req.workerData = worker.data
+  next()
+}
+app.use(commonData)
 
 app.use('/', routes);
 app.use('/users', users);
@@ -59,6 +67,16 @@ app.use(function(err, req, res, next) {
     error: {}
   });
 });
+
+// Run Jobs
+worker.updateBrentOil();
+worker.updateStats();
+worker.updateAllStats();
+
+// Schedule Jobs
+var o = schedule.scheduleJob('* * * * *', worker.updateBrentOil);
+var s = schedule.scheduleJob('* * * * *', worker.updateStats);
+var a = schedule.scheduleJob('* * * * *', worker.updateAllStats);
 
 
 module.exports = app;
