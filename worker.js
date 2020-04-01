@@ -52,7 +52,7 @@ var worker =  {
   updateStats: function() {
     var timerTitle = 'Updating Stats';
     console.time(timerTitle);
-    var url = 'http://www.set-fx.com/json/stats?timestamp=' + Date.now();
+    var url = 'http://www.setfx.com.co/json/stats?timestamp=' + Date.now();
     request(url, function(error, response, html) {
       if (!error) {
         try {
@@ -72,7 +72,7 @@ var worker =  {
   updateAllStats: function() {
     var timerTitle = 'Updating All Stats';
     console.time(timerTitle);
-    var url = 'http://www.set-fx.com/json/allStats?timestamp=' + Date.now();
+    var url = 'http://www.setfx.com.co/json/allStats?timestamp=' + Date.now();
     request(url, function(error, response, html) {
       if (!error) {
         try {
