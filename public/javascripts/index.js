@@ -118,7 +118,7 @@ function loadDolarChart(data) {
             text: 'Dólar Spot'
         },
         subtitle: {
-            text: 'Fuente: http://www.setfx.com.co/'
+            text: 'Fuente: https://dolar.set-icap.com/'
         },
         xAxis: {
             title: {

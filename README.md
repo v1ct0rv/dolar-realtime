@@ -1,6 +1,6 @@
 # dolar-realtime
 
-Información del Dólar Interbancario en tiempo real desde http://www.set-fx.com
+Información del Dólar Interbancario en tiempo real desde https://dolar.set-icap.com/
 
 To run the app you need [node.js,](https://nodejs.org/en/) then:
 

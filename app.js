@@ -11,6 +11,7 @@ var setfx = require('./routes/setfx');
 var investing = require('./routes/investing');
 var worker = require('./worker');
 var schedule = require('node-schedule');
+var proxy = require("express-http-proxy");
 
 var app = express();
 
@@ -36,6 +37,19 @@ app.use('/', routes);
 app.use('/users', users);
 app.use('/setfx', setfx);
 app.use('/investing', investing);
+// proxying requests from /analytics to www.google-analytics.com.
+function getIpFromReq (req) { // get the client's IP address
+    var bareIP = ":" + ((req.connection.socket && req.connection.socket.remoteAddress)
+        || req.headers["x-forwarded-for"] || req.connection.remoteAddress || "");
+    return (bareIP.match(/:([^:]+)$/) || [])[1] || "127.0.0.1";
+}
+
+app.use("/analytics", proxy("www.google-analytics.com", {
+  proxyReqPathResolver: function (req) {
+    return req.url + (req.url.indexOf("?") === -1 ? "?" : "&")
+        + "uip=" + encodeURIComponent(getIpFromReq(req));
+  }
+}));
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

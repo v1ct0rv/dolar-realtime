@@ -1,5 +1,6 @@
 var request = require('request');
-var _ = require('underscore');
+var _ = require('lodash');
+const axios = require('axios');
 
 var worker =  {
   data: {
@@ -49,43 +50,103 @@ var worker =  {
     console.timeEnd(timerTitle);
   },
 
-  updateStats: function() {
+  updateStats: async function() {
     var timerTitle = 'Updating Stats';
     console.time(timerTitle);
-    var url = 'http://www.setfx.com.co/json/stats?timestamp=' + Date.now();
-    request(url, function(error, response, html) {
-      if (!error) {
-        try {
-          var json = JSON.parse(html);
-          worker.data.stats = json;
-        } catch (error) {
-          console.error('Error on request: ' + url + ', error trying to parse: ' + html);
-          console.error(error);
-        }
-      } else {
-        console.error("Error on request: " + url + "Error: " + error);
-      }
-      console.timeEnd(timerTitle);
-    });
+
+    try {
+      var url = 'https://back.set-icap.com/seticap/api/estadisticas/estadisticasPrecioMercado/?timestamp=' + Date.now();
+      const [estadisticasPrecioMercado, estadisticasPromedioCierre, estadisticasMontoMercado] = await Promise.all([
+        axios.post(`https://back.set-icap.com/seticap/api/estadisticas/estadisticasPrecioMercado/?timestamp=${Date.now()}`),
+        axios.post(`https://back.set-icap.com/seticap/api/estadisticas/estadisticasPromedioCierre/?timestamp=${Date.now()}`),
+        axios.post(`https://back.set-icap.com/seticap/api/estadisticas/estadisticasMontoMercado/?timestamp=${Date.now()}`)
+      ]);
+
+      var data = {};
+      // Fill Data
+      data.trm = estadisticasPrecioMercado.data.data.trm;
+      data.trmPriceChange = estadisticasPrecioMercado.data.data.trmchange.toLowerCase();
+      data.maxPrice = estadisticasPrecioMercado.data.data.high;
+      data.maxPriceChange = estadisticasPrecioMercado.data.data.highchange.toLowerCase();
+      data.minPrice = estadisticasPrecioMercado.data.data.low;
+      data.minPriceChange = estadisticasPrecioMercado.data.data.lowchange.toLowerCase();
+      data.openPrice = estadisticasPrecioMercado.data.data.open;
+      data.openPriceChange = estadisticasPrecioMercado.data.data.openchange.toLowerCase();
+
+      data.price = estadisticasPromedioCierre.data.data.close;
+      data.avgPrice = estadisticasPromedioCierre.data.data.avg;
+
+      data.totalAmmount = estadisticasMontoMercado.data.data.sum;
+      data.latestAmmount = estadisticasMontoMercado.data.data.open;
+      data.avgAmmount = estadisticasMontoMercado.data.data.avg;
+      data.minAmmount = estadisticasMontoMercado.data.data.low;
+      data.maxAmmount = estadisticasMontoMercado.data.data.high;
+      data.transactions = estadisticasMontoMercado.data.data.count;
+
+      worker.data.stats = data;
+    } catch (error) {
+      console.error('Error on request: ' + url);
+      console.error(error);
+    }
+
+    // request.post(url, function(error, response, html) {
+    //   if (!error) {
+    //     try {
+    //       var json = JSON.parse(html);
+
+    //       var data = json.data;
+
+    //       // Backwards compatibility changes
+    //       data.trmPriceChange = data.trmchange.toLowerCase()
+    //       data.maxPrice = data.high;
+    //       data.maxPriceChange = data.highchange.toLowerCase()
+    //       data.minPrice = data.low;
+    //       data.minPriceChange = data.lowchange.toLowerCase()
+    //       data.openPrice = data.open;
+    //       data.openPriceChange = data.openchange.toLowerCase()
+
+    //       worker.data.stats = data;
+    //     } catch (error) {
+    //       console.error('Error on request: ' + url + ', error trying to parse: ' + html);
+    //       console.error(error);
+    //     }
+    //   } else {
+    //     console.error("Error on request: " + url + "Error: " + error);
+    //   }
+    // });
+    console.timeEnd(timerTitle);
   },
 
   updateAllStats: function() {
     var timerTitle = 'Updating All Stats';
     console.time(timerTitle);
-    var url = 'http://www.setfx.com.co/json/allStats?timestamp=' + Date.now();
-    request(url, function(error, response, html) {
+    var url = 'https://back.set-icap.com/seticap/api/graficos/graficoMoneda/?timestamp=' + Date.now();
+    request.post(url, function(error, response, html) {
       if (!error) {
         try {
           var data = {
             monto: [],
             precio: []
           };
+
           var json = JSON.parse(html);
-          json.forEach(function (element, index, array) {
-            element= JSON.parse(element)
-            data.precio.push([element.t, parseFloat(element.p)]);
-            data.monto.push([element.t, element.m]);
-          });
+
+          // Correct the json using the logic on https://dolar.set-icap.com/ scripts (https://dolar.set-icap.com/static/js/main.a0a26080.chunk.js)
+          var correctJson = json.result[0].datos_grafico_moneda_mercado.replace(/'/g,'"').replace(/\d{2}:\d{2}(:\d{2})*/gi,function(e){return'"'+e+'"'}).replace(/data:/g,'"data":').replace(/label:/g,'"label":').replace(/type:/g,'"type":').replace(/labels:/g,'"labels":').replace(/datasets:/g,'"datasets":');
+          var remoteData = JSON.parse("{"+correctJson+"}").data
+          // console.log(remoteData);
+
+          // data.precio = remoteData.datasets[0].data;
+          // data.monto = remoteData.datasets[1].data;
+
+          data.precio = remoteData.datasets[0].data.map((precio, index) => [getDateFromHours(remoteData.labels[index]).getTime(), precio]);
+          data.monto = remoteData.datasets[1].data.map((monto, index) => [getDateFromHours(remoteData.labels[index]).getTime(), monto]);
+
+          // json.forEach(function (element, index, array) {
+          //   element= JSON.parse(element)
+          //   data.precio.push([element.t, parseFloat(element.p)]);
+          //   data.monto.push([element.t, element.m]);
+          // });
           //console.log(json);
           worker.data.allStats = data;
         } catch (error) {
@@ -99,5 +160,12 @@ var worker =  {
     });
   }
 };
+
+
+function getDateFromHours(time) {
+    time = time.split(':');
+    let now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), ...time);
+}
 
 module.exports = worker;
