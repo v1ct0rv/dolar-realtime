@@ -23,7 +23,10 @@ function loadBrentOil(callback) {
 
 function updateData(isUpdate) {
     // track page refresh
-    ga('send', 'event', 'data', 'updateData', 'Data Refresh');
+    gtag('event', 'updateData', {
+        'app_name': 'dolaRealtime',
+        'screen_name': 'Home'
+    });
     loadAllStats(function(data, textStatus, jqXHR) {
         if (isUpdate) {
             $('#container').highcharts().series[0].setData(data.monto);
@@ -42,35 +45,37 @@ function updateData(isUpdate) {
             };
         }
 
+        if(data.attr) {
+            $("#oilData").show()
+            // Set Data
+            $("#cierreOil").text(data.attr.last_close_value);
+            $("#priceOil").text(data.attr.last_value);
 
-        // Set Data
-        $("#cierreOil").text(data.attr.last_close_value);
-        $("#priceOil").text(data.attr.last_value);
+            // Show difference
+            var difference = parseFloat(data.attr.last_value-data.attr.last_close_value).toFixed(2);
+            if (difference > 0) {
+                $("#priceOilChange").text(' +' + difference);
+                $("#priceOilChange").attr('class', 'bg-success');
+            } else {
+                $("#priceOilChange").text(difference);
+                $("#priceOilChange").attr('class', 'bg-danger');
+            }
 
-        // Show difference
-        var difference = parseFloat(data.attr.last_value-data.attr.last_close_value).toFixed(2);
-        if (difference > 0) {
-            $("#priceOilChange").text(' +' + difference);
-            $("#priceOilChange").attr('class', 'bg-success');
+            // Show variation
+            var variation = parseFloat((1-(data.attr.last_close_value/data.attr.last_value))*100).toFixed(2);
+            if (variation > 0) {
+                $("#priceOilVariation").text('   (+' + variation + '%)');
+                $("#priceOilVariation").attr('class', 'bg-success');
+            } else {
+                $("#priceOilVariation").text('   (' + variation + '%)');
+                $("#priceOilVariation").attr('class', 'bg-danger');
+            }
         } else {
-            $("#priceOilChange").text(difference);
-            $("#priceOilChange").attr('class', 'bg-danger');
+            $("#oilData").hide()
         }
-
-        // Show variation
-        var variation = parseFloat((1-(data.attr.last_close_value/data.attr.last_value))*100).toFixed(2);
-        if (variation > 0) {
-            $("#priceOilVariation").text('   (+' + variation + '%)');
-            $("#priceOilVariation").attr('class', 'bg-success');
-        } else {
-            $("#priceOilVariation").text('   (' + variation + '%)');
-            $("#priceOilVariation").attr('class', 'bg-danger');
-        }
-
-
 
         // Set Chart
-        if (isUpdate) {
+        if (isUpdate && data.candles) {
             $('#container-brent').highcharts().series[0].setData(data.candles);
         } else {
             loadBrentChart(data);
@@ -195,109 +200,114 @@ function loadDolarChart(data) {
 }
 
 function loadBrentChart(data) {
-    $('#container-brent').highcharts({
-        chart: {
-            zoomType: 'x'
-        },
-        title: {
-            text: 'Petróleo Brent'
-        },
-        subtitle: {
-            text: 'Fuente: http://es.investing.com/commodities/brent-oil'
-        },
-        xAxis: {
-            title: {
-                enabled: true,
-                text: 'Hours of the Day'
-            },
-            type: 'datetime',
-            dateTimeLabelFormats: {
-                hour: '%H:%M'
-            },
-            //tickInterval: 900 * 1000 // quince minutes
-        },
-        yAxis: [{
-            labels: { // Primary yAxis
-                format: '{value}',
-                style: {
-                    color: Highcharts.getOptions().colors[1]
-                }
+    if(!data.candles){
+        $('#container-brent').hide()
+    } else {
+        $('#container-brent').show()
+        $('#container-brent').highcharts({
+            chart: {
+                zoomType: 'x'
             },
             title: {
-                text: 'Precio',
-                style: {
-                    color: Highcharts.getOptions().colors[1]
-                }
+                text: 'Petróleo Brent'
             },
-            opposite: true
-                //max: 3250
-        }],
-        tooltip: {
-            shared: true
-        },
-        legend: {
-            layout: 'vertical',
-            align: 'left',
-            x: 120,
-            verticalAlign: 'top',
-            y: 100,
-            floating: true,
-            backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColor) || '#FFFFFF'
-        },
-        plotOptions: {
-            area: {
-                fillColor: {
-                    linearGradient: {
-                        x1: 0,
-                        y1: 0,
-                        x2: 0,
-                        y2: 1
-                    },
-                    stops: [
-                        [0, Highcharts.getOptions().colors[0]],
-                        [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
-                    ]
+            subtitle: {
+                text: 'Fuente: http://es.investing.com/commodities/brent-oil'
+            },
+            xAxis: {
+                title: {
+                    enabled: true,
+                    text: 'Hours of the Day'
                 },
-                marker: {
-                    radius: 2
+                type: 'datetime',
+                dateTimeLabelFormats: {
+                    hour: '%H:%M'
                 },
-                lineWidth: 1,
-                states: {
-                    hover: {
-                        lineWidth: 1
+                //tickInterval: 900 * 1000 // quince minutes
+            },
+            yAxis: [{
+                labels: { // Primary yAxis
+                    format: '{value}',
+                    style: {
+                        color: Highcharts.getOptions().colors[1]
                     }
                 },
-                threshold: null
-            }
-        },
-        series: [{
-            name: 'Precio',
-            type: 'area',
-            id : 'dataseries',
-            data: data.candles,
+                title: {
+                    text: 'Precio',
+                    style: {
+                        color: Highcharts.getOptions().colors[1]
+                    }
+                },
+                opposite: true
+                    //max: 3250
+            }],
             tooltip: {
-                valuePrefix: '$'
+                shared: true
+            },
+            legend: {
+                layout: 'vertical',
+                align: 'left',
+                x: 120,
+                verticalAlign: 'top',
+                y: 100,
+                floating: true,
+                backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColor) || '#FFFFFF'
+            },
+            plotOptions: {
+                area: {
+                    fillColor: {
+                        linearGradient: {
+                            x1: 0,
+                            y1: 0,
+                            x2: 0,
+                            y2: 1
+                        },
+                        stops: [
+                            [0, Highcharts.getOptions().colors[0]],
+                            [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
+                        ]
+                    },
+                    marker: {
+                        radius: 2
+                    },
+                    lineWidth: 1,
+                    states: {
+                        hover: {
+                            lineWidth: 1
+                        }
+                    },
+                    threshold: null
+                }
+            },
+            series: [{
+                name: 'Precio',
+                type: 'area',
+                id : 'dataseries',
+                data: data.candles,
+                tooltip: {
+                    valuePrefix: '$'
+                }
+                //pointInterval: 900 * 1000 // quince minutes
+            }, {
+                name: 'Eventos',
+                type : 'flags',
+                data : data.events.news,
+                zIndex: 10,
+                onSeries : 'dataseries',
+                shape : 'circlepin',
+                width : 16
+            }, {
+                type: "flags",
+                onSeries: "dataseries",
+                shape: "circlepin",
+                data: data.events.ec,
+                zIndex: 11
+            }],
+            tooltip: {
+                useHTML: true
             }
-            //pointInterval: 900 * 1000 // quince minutes
-        }, {
-            name: 'Eventos',
-            type : 'flags',
-            data : data.events.news,
-            zIndex: 10,
-            onSeries : 'dataseries',
-            shape : 'circlepin',
-            width : 16
-        }, {
-            type: "flags",
-            onSeries: "dataseries",
-            shape: "circlepin",
-            data: data.events.ec,
-            zIndex: 11
-        }],
-        tooltip: {
-            useHTML: true
-        }
-    });
+        });
+    }
 }
 
 $(function() {

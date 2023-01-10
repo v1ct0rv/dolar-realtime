@@ -2,6 +2,12 @@ var request = require('request');
 var _ = require('lodash');
 const axios = require('axios');
 
+
+
+const headers = {
+  'Authorization': 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJPbmxpbmUgSldUIEJ1aWxkZXIiLCJpYXQiOjE2NjgwMDYxOTQsImV4cCI6MTkyMDQ2Njk5NCwiYXVkIjoid3d3LnNldGljYXAuY29tIiwic3ViIjoibGFuZ3Vsb0BzZXQtaWNhcC5jbyIsIkdpdmVuTmFtZSI6Ikx1aXMiLCJTdXJuYW1lIjoiQW5ndWxvIiwiRW1haWwiOiJsYW5ndWxvQHNldC1pY2FwLmNvIiwiUm9sZSI6WyJEZXNhcm9sbG8iLCJXZWIgQWRtaW5pc3RyYXRvciJdfQ.JsekBZkHwbMQ1-8VyW3ic0ClFh9FsnMgHAh6H4qWO2w'
+}
+
 var worker =  {
   data: {
     oilStats: {},
@@ -13,6 +19,7 @@ var worker =  {
     var timerTitle = 'Updating BrentOil';
     console.time(timerTitle);
 
+    // TODO use this api instead: https://api.investing.com/api/financialdata/8833/historical/chart/?interval=PT15M&pointscount=120
     var options = {
       url: 'http://es.investing.com/common/modules/js_instrument_chart/api/data.php?symbol=Petr%25C3%25B3leo%2BBrent&pair_id=8833&pair_id_for_news=8833&chart_type=area&pair_interval=300&candle_count=120&events=yes&volume_series=yes',
       headers: {
@@ -57,9 +64,9 @@ var worker =  {
     try {
       var url = 'https://back.set-icap.com/seticap/api/estadisticas/estadisticasPrecioMercado/?timestamp=' + Date.now();
       const [estadisticasPrecioMercado, estadisticasPromedioCierre, estadisticasMontoMercado] = await Promise.all([
-        axios.post(`https://back.set-icap.com/seticap/api/estadisticas/estadisticasPrecioMercado/?timestamp=${Date.now()}`),
-        axios.post(`https://back.set-icap.com/seticap/api/estadisticas/estadisticasPromedioCierre/?timestamp=${Date.now()}`),
-        axios.post(`https://back.set-icap.com/seticap/api/estadisticas/estadisticasMontoMercado/?timestamp=${Date.now()}`)
+        axios.post(`https://back.set-icap.com/seticap/api/estadisticas/estadisticasPrecioMercado/?timestamp=${Date.now()}`, {}, { headers: headers }),
+        axios.post(`https://back.set-icap.com/seticap/api/estadisticas/estadisticasPromedioCierre/?timestamp=${Date.now()}`, {}, { headers: headers }),
+        axios.post(`https://back.set-icap.com/seticap/api/estadisticas/estadisticasMontoMercado/?timestamp=${Date.now()}`, {}, { headers: headers })
       ]);
 
       var data = {};
@@ -121,7 +128,7 @@ var worker =  {
     var timerTitle = 'Updating All Stats';
     console.time(timerTitle);
     var url = 'https://back.set-icap.com/seticap/api/graficos/graficoMoneda/?timestamp=' + Date.now();
-    request.post(url, function(error, response, html) {
+    request.post({ url: url, headers: headers }, function (error, response, html) {
       if (!error) {
         try {
           var data = {

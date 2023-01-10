@@ -1,3 +1,7 @@
 {
-    "vsicons.presets.angular": false
+    "vsicons.presets.angular": false,
+    "appService.zipIgnorePattern": [
+        "node_modules{,/**}",
+        ".vscode{,/**}"
+    ]
 }

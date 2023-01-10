@@ -44,7 +44,7 @@ function getIpFromReq (req) { // get the client's IP address
     return (bareIP.match(/:([^:]+)$/) || [])[1] || "127.0.0.1";
 }
 
-app.use("/analytics", proxy("www.google-analytics.com", {
+app.use("/analytics", proxy("https://www.google-analytics.com", {
   proxyReqPathResolver: function (req) {
     return req.url + (req.url.indexOf("?") === -1 ? "?" : "&")
         + "uip=" + encodeURIComponent(getIpFromReq(req));
@@ -88,9 +88,9 @@ worker.updateStats();
 worker.updateAllStats();
 
 // Schedule Jobs
-var o = schedule.scheduleJob('* * * * *', worker.updateBrentOil);
-var s = schedule.scheduleJob('* * * * *', worker.updateStats);
-var a = schedule.scheduleJob('* * * * *', worker.updateAllStats);
+var o = schedule.scheduleJob('*/30 * * * * *', worker.updateBrentOil);
+var s = schedule.scheduleJob('*/20 * * * * *', worker.updateStats);
+var a = schedule.scheduleJob('*/20 * * * * *', worker.updateAllStats);
 
 
 module.exports = app;
