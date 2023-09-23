@@ -83,12 +83,12 @@ app.use(function(err, req, res, next) {
 });
 
 // Run Jobs
-worker.updateBrentOil();
+//worker.updateBrentOil();
 worker.updateStats();
 worker.updateAllStats();
 
 // Schedule Jobs
-var o = schedule.scheduleJob('*/30 * * * * *', worker.updateBrentOil);
+//var o = schedule.scheduleJob('*/30 * * * * *', worker.updateBrentOil);
 var s = schedule.scheduleJob('*/20 * * * * *', worker.updateStats);
 var a = schedule.scheduleJob('*/20 * * * * *', worker.updateAllStats);
 

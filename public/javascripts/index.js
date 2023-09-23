@@ -115,87 +115,97 @@ function isIconIndicator(key) {
 }
 
 function loadDolarChart(data) {
-    $('#container').highcharts({
-        chart: {
-            zoomType: 'x'
-        },
+    $("#container").highcharts({
+      chart: {
+        zoomType: "x",
+      },
+      title: {
+        text: "Dólar Spot",
+      },
+      subtitle: {
+        text: "Fuente: https://dolar.icap.com.co/",
+      },
+      xAxis: {
         title: {
-            text: 'Dólar Spot'
+          enabled: true,
+          text: "Hours of the Day",
         },
-        subtitle: {
-            text: 'Fuente: https://dolar.set-icap.com/'
+        type: "datetime",
+        dateTimeLabelFormats: {
+          hour: "%H:%M",
         },
-        xAxis: {
-            title: {
-                enabled: true,
-                text: 'Hours of the Day'
+        //tickInterval: 900 * 1000 // quince minutes
+      },
+      yAxis: [
+        {
+          labels: {
+            // Primary yAxis
+            format: "{value}",
+            style: {
+              color: Highcharts.getOptions().colors[1],
             },
-            type: 'datetime',
-            dateTimeLabelFormats: {
-                hour: '%H:%M'
+          },
+          title: {
+            text: "Precio",
+            style: {
+              color: Highcharts.getOptions().colors[1],
             },
-            //tickInterval: 900 * 1000 // quince minutes
+          },
+          opposite: true,
+          //max: 3250
         },
-        yAxis: [{
-            labels: { // Primary yAxis
-                format: '{value}',
-                style: {
-                    color: Highcharts.getOptions().colors[1]
-                }
+        {
+          // Secondary yAxis
+          title: {
+            text: "Monto (Miles UDS)",
+            style: {
+              color: Highcharts.getOptions().colors[0],
             },
-            title: {
-                text: 'Precio',
-                style: {
-                    color: Highcharts.getOptions().colors[1]
-                }
+          },
+          labels: {
+            format: "{value}",
+            style: {
+              color: Highcharts.getOptions().colors[0],
             },
-            opposite: true
-                //max: 3250
-        }, { // Secondary yAxis
-            title: {
-                text: 'Monto (Miles UDS)',
-                style: {
-                    color: Highcharts.getOptions().colors[0]
-                }
-            },
-            labels: {
-                format: '{value}',
-                style: {
-                    color: Highcharts.getOptions().colors[0]
-                }
-            }
-            //max: 5000000
-        }],
-        tooltip: {
-            shared: true
+          },
+          //max: 5000000
         },
-        legend: {
-            layout: 'vertical',
-            align: 'left',
-            x: 120,
-            verticalAlign: 'top',
-            y: 100,
-            floating: true,
-            backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColor) || '#FFFFFF'
+      ],
+      tooltip: {
+        shared: true,
+      },
+      legend: {
+        layout: "vertical",
+        align: "left",
+        x: 120,
+        verticalAlign: "top",
+        y: 100,
+        floating: true,
+        backgroundColor:
+          (Highcharts.theme && Highcharts.theme.legendBackgroundColor) ||
+          "#FFFFFF",
+      },
+      series: [
+        {
+          name: "Monto",
+          type: "column",
+          yAxis: 1,
+          data: data.monto,
+          tooltip: {
+            valuePrefix: "USD$",
+          },
+          //pointInterval: 900 * 1000 // quince minutes
         },
-        series: [{
-            name: 'Monto',
-            type: 'column',
-            yAxis: 1,
-            data: data.monto,
-            tooltip: {
-                valuePrefix: 'USD$'
-            },
-            //pointInterval: 900 * 1000 // quince minutes
-        }, {
-            name: 'Precio',
-            type: 'spline',
-            data: data.precio,
-            tooltip: {
-                valuePrefix: '$'
-            },
-            //pointInterval: 900 * 1000 // quince minutes
-        }]
+        {
+          name: "Precio",
+          type: "spline",
+          data: data.precio,
+          tooltip: {
+            valuePrefix: "$",
+          },
+          //pointInterval: 900 * 1000 // quince minutes
+        },
+      ],
     });
 }
 

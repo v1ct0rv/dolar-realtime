@@ -5,50 +5,60 @@ const axios = require('axios');
 
 
 const headers = {
-  'Authorization': 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJPbmxpbmUgSldUIEJ1aWxkZXIiLCJpYXQiOjE2NjgwMDYxOTQsImV4cCI6MTkyMDQ2Njk5NCwiYXVkIjoid3d3LnNldGljYXAuY29tIiwic3ViIjoibGFuZ3Vsb0BzZXQtaWNhcC5jbyIsIkdpdmVuTmFtZSI6Ikx1aXMiLCJTdXJuYW1lIjoiQW5ndWxvIiwiRW1haWwiOiJsYW5ndWxvQHNldC1pY2FwLmNvIiwiUm9sZSI6WyJEZXNhcm9sbG8iLCJXZWIgQWRtaW5pc3RyYXRvciJdfQ.JsekBZkHwbMQ1-8VyW3ic0ClFh9FsnMgHAh6H4qWO2w'
-}
+  Authorization:
+    "U2FsdGVkX19DSC/UgOTmKKFT71EmflbBX3tiljxmNpmMcLRZSwNlQCKxUXoN3QpJQ/f7lOA8X41400fnR5G7wA==",
+};
 
-var worker =  {
+var worker = {
   data: {
     oilStats: {},
     stats: {},
-    allStats: {}
+    allStats: {},
   },
 
-  updateBrentOil: function() {
-    var timerTitle = 'Updating BrentOil';
+  updateBrentOil: function () {
+    var timerTitle = "Updating BrentOil";
     console.time(timerTitle);
 
     // TODO use this api instead: https://api.investing.com/api/financialdata/8833/historical/chart/?interval=PT15M&pointscount=120
     var options = {
-      url: 'http://es.investing.com/common/modules/js_instrument_chart/api/data.php?symbol=Petr%25C3%25B3leo%2BBrent&pair_id=8833&pair_id_for_news=8833&chart_type=area&pair_interval=300&candle_count=120&events=yes&volume_series=yes',
+      url: "http://es.investing.com/common/modules/js_instrument_chart/api/data.php?symbol=Petr%25C3%25B3leo%2BBrent&pair_id=8833&pair_id_for_news=8833&chart_type=area&pair_interval=300&candle_count=120&events=yes&volume_series=yes",
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)',
-        'Referer': 'http://es.investing.com/commodities/brent-oil',
-        'X-Requested-With': 'XMLHttpRequest'
-      }
+        "User-Agent":
+          "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)",
+        Referer: "http://es.investing.com/commodities/brent-oil",
+        "X-Requested-With": "XMLHttpRequest",
+      },
     };
 
-    request(options, function(error, response, html) {
+    request(options, function (error, response, html) {
       if (!error) {
         try {
           var data = JSON.parse(html);
 
           // Sort the data to avoid http://www.highcharts.com/errors/15
-          if(data.candles) {
-            data.candles = _.sortBy(data.candles, function(arr) { return arr[0]; });
+          if (data.candles) {
+            data.candles = _.sortBy(data.candles, function (arr) {
+              return arr[0];
+            });
           }
 
-          if(data.events && data.events.news) {
-            data.events.news = _.sortBy(data.events.news, function(o) { return o.x; });
+          if (data.events && data.events.news) {
+            data.events.news = _.sortBy(data.events.news, function (o) {
+              return o.x;
+            });
           }
 
           worker.data.oilStats = data;
         } catch (error) {
-          console.error('Error on request: ' + options.url + ', error trying to parse: ' + html);
+          console.error(
+            "Error on request: " +
+              options.url +
+              ", error trying to parse: " +
+              html
+          );
           console.error(error);
         }
-
       } else {
         console.error("Error on request: " + options.url + "Error: " + error);
       }
@@ -57,28 +67,51 @@ var worker =  {
     console.timeEnd(timerTitle);
   },
 
-  updateStats: async function() {
-    var timerTitle = 'Updating Stats';
+  updateStats: async function () {
+    var timerTitle = "Updating Stats";
+    let currentDate = new Date();
+    let dateformatted = currentDate.toISOString().split("T")[0];
     console.time(timerTitle);
 
     try {
-      var url = 'https://back.set-icap.com/seticap/api/estadisticas/estadisticasPrecioMercado/?timestamp=' + Date.now();
-      const [estadisticasPrecioMercado, estadisticasPromedioCierre, estadisticasMontoMercado] = await Promise.all([
-        axios.post(`https://back.set-icap.com/seticap/api/estadisticas/estadisticasPrecioMercado/?timestamp=${Date.now()}`, {}, { headers: headers }),
-        axios.post(`https://back.set-icap.com/seticap/api/estadisticas/estadisticasPromedioCierre/?timestamp=${Date.now()}`, {}, { headers: headers }),
-        axios.post(`https://back.set-icap.com/seticap/api/estadisticas/estadisticasMontoMercado/?timestamp=${Date.now()}`, {}, { headers: headers })
+      var url =
+        "https://proxy.icap.com.co/seticap/api/estadisticas/estadisticasPrecioMercado/";
+      const [
+        estadisticasPrecioMercado,
+        estadisticasPromedioCierre,
+        estadisticasMontoMercado,
+      ] = await Promise.all([
+        axios.post(
+          "https://proxy.icap.com.co/seticap/api/estadisticas/estadisticasPrecioMercado/",
+          { fecha: dateformatted, mercado: 71, delay: 15 },
+          { headers: headers }
+        ),
+        axios.post(
+          "https://proxy.icap.com.co/seticap/api/estadisticas/estadisticasPromedioCierre/",
+          { fecha: dateformatted, mercado: 71, delay: 15 },
+          { headers: headers }
+        ),
+        axios.post(
+          "https://proxy.icap.com.co/seticap/api/estadisticas/estadisticasMontoMercado/",
+          { fecha: dateformatted, mercado: 71, delay: 15 },
+          { headers: headers }
+        ),
       ]);
 
       var data = {};
       // Fill Data
       data.trm = estadisticasPrecioMercado.data.data.trm;
-      data.trmPriceChange = estadisticasPrecioMercado.data.data.trmchange.toLowerCase();
+      data.trmPriceChange =
+        estadisticasPrecioMercado.data.data.trmchange.toLowerCase();
       data.maxPrice = estadisticasPrecioMercado.data.data.high;
-      data.maxPriceChange = estadisticasPrecioMercado.data.data.highchange.toLowerCase();
+      data.maxPriceChange =
+        estadisticasPrecioMercado.data.data.highchange.toLowerCase();
       data.minPrice = estadisticasPrecioMercado.data.data.low;
-      data.minPriceChange = estadisticasPrecioMercado.data.data.lowchange.toLowerCase();
+      data.minPriceChange =
+        estadisticasPrecioMercado.data.data.lowchange.toLowerCase();
       data.openPrice = estadisticasPrecioMercado.data.data.open;
-      data.openPriceChange = estadisticasPrecioMercado.data.data.openchange.toLowerCase();
+      data.openPriceChange =
+        estadisticasPrecioMercado.data.data.openchange.toLowerCase();
 
       data.price = estadisticasPromedioCierre.data.data.close;
       data.avgPrice = estadisticasPromedioCierre.data.data.avg;
@@ -92,7 +125,7 @@ var worker =  {
 
       worker.data.stats = data;
     } catch (error) {
-      console.error('Error on request: ' + url);
+      console.error("Error on request: " + url);
       console.error(error);
     }
 
@@ -124,48 +157,74 @@ var worker =  {
     console.timeEnd(timerTitle);
   },
 
-  updateAllStats: function() {
-    var timerTitle = 'Updating All Stats';
+  updateAllStats: function () {
+    var timerTitle = "Updating All Stats";
     console.time(timerTitle);
-    var url = 'https://back.set-icap.com/seticap/api/graficos/graficoMoneda/?timestamp=' + Date.now();
-    request.post({ url: url, headers: headers }, function (error, response, html) {
-      if (!error) {
-        try {
-          var data = {
-            monto: [],
-            precio: []
-          };
+    let currentDate = new Date();
+    let dateformatted = currentDate.toISOString().split("T")[0];
+    var url = "https://proxy.icap.com.co/seticap/api/graficos/graficoMoneda/";
+    request.post(
+      {
+        url: url,
+        headers: headers,
+        form: { fecha: dateformatted, moneda: 1, delay: "15" },
+      },
+      function (error, response, html) {
+        if (!error) {
+          try {
+            var data = {
+              monto: [],
+              precio: [],
+            };
 
-          var json = JSON.parse(html);
+            var json = JSON.parse(html);
 
-          // Correct the json using the logic on https://dolar.set-icap.com/ scripts (https://dolar.set-icap.com/static/js/main.a0a26080.chunk.js)
-          var correctJson = json.result[0].datos_grafico_moneda_mercado.replace(/'/g,'"').replace(/\d{2}:\d{2}(:\d{2})*/gi,function(e){return'"'+e+'"'}).replace(/data:/g,'"data":').replace(/label:/g,'"label":').replace(/type:/g,'"type":').replace(/labels:/g,'"labels":').replace(/datasets:/g,'"datasets":');
-          var remoteData = JSON.parse("{"+correctJson+"}").data
-          // console.log(remoteData);
+            // Correct the json using the logic on https://dolar.set-icap.com/ scripts (https://dolar.set-icap.com/static/js/main.a0a26080.chunk.js)
+            var correctJson = json.result[0].datos_grafico_moneda_mercado
+              .replace(/'/g, '"')
+              .replace(/\d{2}:\d{2}(:\d{2})*/gi, function (e) {
+                return '"' + e + '"';
+              })
+              .replace(/data:/g, '"data":')
+              .replace(/label:/g, '"label":')
+              .replace(/type:/g, '"type":')
+              .replace(/labels:/g, '"labels":')
+              .replace(/datasets:/g, '"datasets":');
+            var remoteData = JSON.parse("{" + correctJson + "}").data;
+            // console.log(remoteData);
 
-          // data.precio = remoteData.datasets[0].data;
-          // data.monto = remoteData.datasets[1].data;
+            // data.precio = remoteData.datasets[0].data;
+            // data.monto = remoteData.datasets[1].data;
 
-          data.precio = remoteData.datasets[0].data.map((precio, index) => [getDateFromHours(remoteData.labels[index]).getTime(), precio]);
-          data.monto = remoteData.datasets[1].data.map((monto, index) => [getDateFromHours(remoteData.labels[index]).getTime(), monto]);
+            data.precio = remoteData.datasets[0].data.map((precio, index) => [
+              getDateFromHours(remoteData.labels[index]).getTime(),
+              precio,
+            ]);
+            data.monto = remoteData.datasets[1].data.map((monto, index) => [
+              getDateFromHours(remoteData.labels[index]).getTime(),
+              monto,
+            ]);
 
-          // json.forEach(function (element, index, array) {
-          //   element= JSON.parse(element)
-          //   data.precio.push([element.t, parseFloat(element.p)]);
-          //   data.monto.push([element.t, element.m]);
-          // });
-          //console.log(json);
-          worker.data.allStats = data;
-        } catch (error) {
-          console.error('Error on request: ' + url + ', error trying to parse: ' + html);
-          console.error(error);
+            // json.forEach(function (element, index, array) {
+            //   element= JSON.parse(element)
+            //   data.precio.push([element.t, parseFloat(element.p)]);
+            //   data.monto.push([element.t, element.m]);
+            // });
+            //console.log(json);
+            worker.data.allStats = data;
+          } catch (error) {
+            console.error(
+              "Error on request: " + url + ", error trying to parse: " + html
+            );
+            console.error(error);
+          }
+        } else {
+          console.error("Error on request: " + url + "Error: " + error);
         }
-      } else {
-        console.error("Error on request: " + url + "Error: " + error);
+        console.timeEnd(timerTitle);
       }
-      console.timeEnd(timerTitle);
-    });
-  }
+    );
+  },
 };
 
 
