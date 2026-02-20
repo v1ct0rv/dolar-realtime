@@ -11,6 +11,13 @@ jobs:
     steps:
       - name: Call collect-data endpoint
         run: |
-          curl -sf -X POST "${{ vars.APP_URL }}/api/cron/collect-data" \
+          RESPONSE=$(curl -sf -X POST "${{ vars.APP_URL }}/api/cron/collect-data" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json"
+            -H "Content-Type: application/json")
+
+          echo "$RESPONSE" | python3 -m json.tool > formatted.json
+
+          echo "## Collect data response" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat formatted.json >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
