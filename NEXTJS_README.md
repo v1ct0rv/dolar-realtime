@@ -362,7 +362,7 @@ MIT License - see LICENSE file for details
 ## 🔗 Links
 
 - [Live App](https://dolar.victorv.co/) (Legacy version)
-- [GitHub Repository](https://github.com/victorv977/dolar-realtime)
+- [GitHub Repository](https://github.com/v1ct0rv/dolar-realtime)
 - [SET-ICAP Data Source](https://dolar.set-icap.com/)
 - [Next.js Documentation](https://nextjs.org/docs)
 - [MongoDB Node.js Driver](https://www.mongodb.com/docs/drivers/node/current/)

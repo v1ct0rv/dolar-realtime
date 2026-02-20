@@ -67,10 +67,14 @@ export default function Home() {
           </h2>
           <div className="space-y-4 text-gray-600 dark:text-gray-300">
             <p>
-              Dólar Realtime es una aplicación Next.js que proporciona información actualizada sobre
-              el tipo de cambio del dólar interbancario colombiano (COP/USD).
+              Dólar Realtime es una aplicación Next.js que proporciona
+              información actualizada sobre el tipo de cambio del dólar
+              interbancario colombiano (COP/USD).
             </p>
-            <p>Los datos son obtenidos de SET-ICAP, la plataforma oficial de negociación.</p>
+            <p>
+              Los datos son obtenidos de SET-ICAP, la plataforma oficial de
+              negociación.
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
               <div className="flex items-start gap-3">
                 <span className="text-2xl">✓</span>
@@ -78,7 +82,9 @@ export default function Home() {
                   <h3 className="font-semibold text-gray-900 dark:text-white">
                     Datos en Tiempo Real
                   </h3>
-                  <p className="text-sm">Actualizaciones cada 20 segundos durante horas de mercado</p>
+                  <p className="text-sm">
+                    Actualizaciones cada 20 segundos durante horas de mercado
+                  </p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -87,7 +93,9 @@ export default function Home() {
                   <h3 className="font-semibold text-gray-900 dark:text-white">
                     Persistencia en MongoDB
                   </h3>
-                  <p className="text-sm">Todos los datos históricos almacenados para análisis</p>
+                  <p className="text-sm">
+                    Todos los datos históricos almacenados para análisis
+                  </p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -96,7 +104,9 @@ export default function Home() {
                   <h3 className="font-semibold text-gray-900 dark:text-white">
                     Reportes Avanzados
                   </h3>
-                  <p className="text-sm">6 tipos de reportes con análisis estadístico</p>
+                  <p className="text-sm">
+                    6 tipos de reportes con análisis estadístico
+                  </p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -105,7 +115,9 @@ export default function Home() {
                   <h3 className="font-semibold text-gray-900 dark:text-white">
                     Application Insights
                   </h3>
-                  <p className="text-sm">Monitoreo completo de rendimiento y uso</p>
+                  <p className="text-sm">
+                    Monitoreo completo de rendimiento y uso
+                  </p>
                 </div>
               </div>
             </div>
@@ -116,7 +128,7 @@ export default function Home() {
         <div className="text-center text-gray-600 dark:text-gray-400">
           <p>
             <a
-              href="https://github.com/victorv977/dolar-realtime"
+              href="https://github.com/v1ct0rv/dolar-realtime"
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
@@ -125,7 +137,7 @@ export default function Home() {
             </a>
           </p>
           <p className="mt-2 text-sm">
-            Datos proporcionados por{' '}
+            Datos proporcionados por{" "}
             <a
               href="https://dolar.set-icap.com/"
               target="_blank"

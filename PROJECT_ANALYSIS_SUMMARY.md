@@ -425,7 +425,7 @@ Azure Static Web Apps + Application Insights
 ## Contact & Support
 
 **Project Owner:** Victor V
-**Repository:** https://github.com/victorv977/dolar-realtime
+**Repository:** https://github.com/v1ct0rv/dolar-realtime
 **Current App:** http://dolar.victor.co
 
 For questions or clarifications on the requirements, refer to the detailed documentation files or reach out to the project team.

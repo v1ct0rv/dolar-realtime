@@ -13,17 +13,28 @@
  */
 
 const { MongoClient } = require('mongodb');
+const path = require('path');
+
+// Load environment variables from .env or .env.local file if it exists
+require('dotenv').config({ path: path.join(process.cwd(), '.env') });
+require('dotenv').config({ path: path.join(process.cwd(), '.env.local') });
+
 
 // MongoDB connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'dolar-realtime';
 
+// Accept collection name as CLI arg: node remove-duplicates.js [collectionName]
+const COLLECTION_NAME = process.argv[2] || 'dolarData';
+
 async function removeDuplicates() {
   console.log('🧹 Starting duplicate removal process...\n');
+  console.log(`📁 Target collection: ${COLLECTION_NAME}\n`);
 
   // Connect to MongoDB
   console.log('🔌 Connecting to MongoDB...');
-  console.log(`   URI: ${MONGODB_URI}`);
+  const safeURI = MONGODB_URI.replace(/:[^:@]+@/, ':****@');
+  console.log(`   URI: ${safeURI}`);
   console.log(`   Database: ${MONGODB_DB_NAME}\n`);
 
   const client = new MongoClient(MONGODB_URI);
@@ -33,7 +44,7 @@ async function removeDuplicates() {
     console.log('✅ Connected to MongoDB\n');
 
     const db = client.db(MONGODB_DB_NAME);
-    const collection = db.collection('dolarData');
+    const collection = db.collection(COLLECTION_NAME);
 
     // Get initial count
     const initialCount = await collection.countDocuments();
@@ -42,29 +53,34 @@ async function removeDuplicates() {
     // Aggregate to find duplicates
     console.log('🔍 Finding duplicate records...');
 
+    // trmData deduplicates by date only; dolarData by full price snapshot
+    const groupId = COLLECTION_NAME === 'trmData'
+      ? { date: '$date' }
+      : {
+          date: '$date',
+          price: '$price',
+          openPrice: '$openPrice',
+          minPrice: '$minPrice',
+          maxPrice: '$maxPrice',
+          avgPrice: '$avgPrice',
+          volume: '$volume',
+          transactions: '$transactions',
+        };
+
     const pipeline = [
       {
-        $sort: { timestamp: 1 }, // Sort by timestamp ascending
+        $sort: { createdAt: 1 },
       },
       {
         $group: {
-          _id: {
-            date: '$date',
-            price: '$price',
-            openPrice: '$openPrice',
-            minPrice: '$minPrice',
-            maxPrice: '$maxPrice',
-            avgPrice: '$avgPrice',
-            volume: '$volume',
-            transactions: '$transactions',
-          },
+          _id: groupId,
           docs: { $push: '$$ROOT' },
           count: { $sum: 1 },
         },
       },
       {
         $match: {
-          count: { $gt: 1 }, // Only groups with duplicates
+          count: { $gt: 1 },
         },
       },
     ];
@@ -93,28 +109,15 @@ async function removeDuplicates() {
 
     await new Promise((resolve) => setTimeout(resolve, 5000));
 
-    // Delete duplicates (keep first, delete rest)
-    let deletedCount = 0;
+    // Collect all IDs to delete across all groups, then delete in one batch
+    console.log('🗑️  Collecting IDs to delete...');
+    const allIdsToDelete = duplicateGroups.flatMap(
+      (group) => group.docs.slice(1).map((doc) => doc._id) // keep first, delete rest
+    );
 
-    for (const group of duplicateGroups) {
-      // Keep the first document (oldest timestamp), delete the rest
-      const docsToDelete = group.docs.slice(1); // Skip first, delete rest
-
-      const idsToDelete = docsToDelete.map((doc) => doc._id);
-
-      if (idsToDelete.length > 0) {
-        const result = await collection.deleteMany({
-          _id: { $in: idsToDelete },
-        });
-
-        deletedCount += result.deletedCount;
-
-        // Progress update
-        process.stdout.write(
-          `   Progress: Deleted ${deletedCount}/${totalDuplicates} duplicates\r`
-        );
-      }
-    }
+    console.log(`   Deleting ${allIdsToDelete.length} documents in a single operation...\n`);
+    const result = await collection.deleteMany({ _id: { $in: allIdsToDelete } });
+    const deletedCount = result.deletedCount;
 
     console.log('\n');
 

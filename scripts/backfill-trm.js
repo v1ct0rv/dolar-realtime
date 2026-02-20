@@ -14,6 +14,10 @@ const { MongoClient } = require('mongodb');
 const fs = require('fs');
 const path = require('path');
 
+// Load environment variables from .env or .env.local file if it exists
+require('dotenv').config({ path: path.join(process.cwd(), '.env') });
+require('dotenv').config({ path: path.join(process.cwd(), '.env.local') });
+
 // MongoDB connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'dolar-realtime';
@@ -104,7 +108,8 @@ async function backfillTRM() {
 
   // Connect to MongoDB
   console.log('🔌 Connecting to MongoDB...');
-  console.log(`   URI: ${MONGODB_URI}`);
+  const safeURI = MONGODB_URI.replace(/:[^:@]+@/, ':****@');
+  console.log(`   URI: ${safeURI}`);
   console.log(`   Database: ${MONGODB_DB_NAME}\n`);
 
   const client = new MongoClient(MONGODB_URI);
@@ -130,30 +135,27 @@ async function backfillTRM() {
       await new Promise(resolve => setTimeout(resolve, 5000));
     }
 
-    // Insert records in batches
+    // Upsert records in batches (insert if new date, skip if already exists)
     const BATCH_SIZE = 1000;
     let inserted = 0;
     let skipped = 0;
 
-    console.log('💾 Inserting records into MongoDB...\n');
+    console.log('💾 Upserting records into MongoDB...\n');
 
     for (let i = 0; i < records.length; i += BATCH_SIZE) {
       const batch = records.slice(i, i + BATCH_SIZE);
 
-      try {
-        // Use insertMany with ordered: false to continue on duplicate key errors
-        const result = await collection.insertMany(batch, { ordered: false });
-        inserted += result.insertedCount;
-      } catch (error) {
-        // Count successful inserts even if some failed
-        if (error.writeErrors) {
-          const successfulInserts = batch.length - error.writeErrors.length;
-          inserted += successfulInserts;
-          skipped += error.writeErrors.length;
-        } else {
-          throw error;
-        }
-      }
+      const ops = batch.map((record) => ({
+        updateOne: {
+          filter: { date: record.date },
+          update: { $setOnInsert: record },
+          upsert: true,
+        },
+      }));
+
+      const result = await collection.bulkWrite(ops, { ordered: false });
+      inserted += result.upsertedCount;
+      skipped += result.matchedCount;
 
       // Progress update
       const progress = Math.min(i + BATCH_SIZE, records.length);
@@ -165,7 +167,16 @@ async function backfillTRM() {
 
     // Create indexes
     console.log('🔍 Creating indexes...');
-    await collection.createIndex({ date: -1 }, { unique: true });
+    try {
+      await collection.createIndex({ date: -1 }, { unique: true });
+    } catch (indexErr) {
+      if (indexErr.code === 11000) {
+        console.warn('⚠️  Could not create unique index on date: duplicate values exist in the collection.');
+        console.warn('   Run node scripts/remove-duplicates.js first, then re-run this script.\n');
+      } else {
+        throw indexErr;
+      }
+    }
     await collection.createIndex({ createdAt: -1 });
     console.log('✅ Indexes created\n');
 

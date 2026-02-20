@@ -5,7 +5,7 @@
 This document outlines the requirements for rewriting the existing Node.js/Express/Jade application "Dolar Realtime" as a modern React-based application with Azure Static Web Apps deployment, MongoDB persistence, and Application Insights integration.
 
 **Current Application:** http://dolar.victor.co
-**Repository:** https://github.com/victorv977/dolar-realtime
+**Repository:** https://github.com/v1ct0rv/dolar-realtime
 
 ---
 

@@ -163,7 +163,7 @@ npm start
 ## 🔗 Links
 
 - **Live App**: [https://dolar.victorv.co/](https://dolar.victorv.co/) (Legacy version)
-- **GitHub**: [https://github.com/victorv977/dolar-realtime](https://github.com/victorv977/dolar-realtime)
+- **GitHub**: [https://github.com/v1ct0rv/dolar-realtime](https://github.com/v1ct0rv/dolar-realtime)
 - **Data Source**: [SET-ICAP](https://dolar.set-icap.com/)
 
 ## 📄 License

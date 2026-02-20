@@ -8,7 +8,7 @@ This directory contains utility scripts for importing and managing data in the D
 
 The `backfill-trm.js` script imports historical TRM (Tasa Representativa del Mercado) data from the CSV file into MongoDB.
 
-**Data Source:** `data/historic_trm.csv` (~12,462 records from 1991 to present)
+**Data Source:** `data/historic_trm.csv` (~12,462 records from 1991 to present) you can download the CSV from [this link](https://suameca.banrep.gov.co/estadisticas-economicas/informacionSerie/1/tasa_cambio_peso_colombiano_trm_dolar_usd)
 
 ### Features
 

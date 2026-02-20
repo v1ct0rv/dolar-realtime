@@ -1,0 +1,16 @@
+name: Collect dolar data
+
+on:
+  schedule:
+    - cron: '*/5 13-18 * * 1-5'  # Every 5 min, Mon-Fri, 8:00 AM - 1:30 PM COT (UTC-5 = 13:00-18:30 UTC)
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call collect-data endpoint
+        run: |
+          curl -sf -X POST "${{ vars.APP_URL }}/api/cron/collect-data" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"
