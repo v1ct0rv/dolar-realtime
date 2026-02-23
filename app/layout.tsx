@@ -30,6 +30,10 @@ export const metadata: Metadata = {
   description:
     'Información del Dólar Interbancario en tiempo real desde SET-ICAP. Análisis TRM, históricos y reportes.',
   keywords: 'dolar, trm, colombia, tipo de cambio, set-icap',
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)',  color: '#080d1a' },
+    { media: '(prefers-color-scheme: light)', color: '#f4ede0' },
+  ],
 };
 
 export default function RootLayout({

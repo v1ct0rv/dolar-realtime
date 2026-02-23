@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <!-- Subtle glow for the top bar -->
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Gold gradient: faint at bottom, bright at top -->
+    <linearGradient id="bar1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d4922a" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#d4922a" stop-opacity="0.3"/>
+    </linearGradient>
+    <linearGradient id="bar2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d4922a" stop-opacity="0.82"/>
+      <stop offset="100%" stop-color="#d4922a" stop-opacity="0.5"/>
+    </linearGradient>
+    <linearGradient id="bar3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e8a83a" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#d4922a" stop-opacity="0.7"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background: dark navy rounded square -->
+  <rect width="32" height="32" rx="5.5" fill="#080d1a"/>
+
+  <!-- Inner subtle frame glow -->
+  <rect x="0.75" y="0.75" width="30.5" height="30.5" rx="5" fill="none" stroke="#d4922a" stroke-width="0.5" opacity="0.15"/>
+
+  <!-- Bar 1 — short, faint -->
+  <rect x="4" y="21" width="6.5" height="9.5" rx="1.5" fill="url(#bar1)"/>
+
+  <!-- Bar 2 — medium -->
+  <rect x="12.75" y="14" width="6.5" height="16.5" rx="1.5" fill="url(#bar2)"/>
+
+  <!-- Bar 3 — tall, bright, glowing -->
+  <rect x="21.5" y="6" width="6.5" height="24.5" rx="1.5" fill="url(#bar3)" filter="url(#glow)"/>
+
+  <!-- Trend line connecting bar tops -->
+  <polyline
+    points="7.25,21 16,14 24.75,6"
+    fill="none"
+    stroke="#d4922a"
+    stroke-width="1.25"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.35"
+  />
+
+  <!-- Live price dot at top of tallest bar -->
+  <circle cx="24.75" cy="6" r="2.25" fill="#3a6fef" opacity="0.95"/>
+  <circle cx="24.75" cy="6" r="1.1" fill="#6fa0ff"/>
+</svg>
