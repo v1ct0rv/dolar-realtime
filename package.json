@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint app lib types --ext ts,tsx",
     "backfill-trm": "node scripts/backfill-trm.js",
     "remove-duplicates-trmData": "node scripts/remove-duplicates.js trmData",
     "remove-duplicates-dolarData": "node scripts/remove-duplicates.js dolarData"
@@ -19,6 +19,9 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "recharts": "^3.7.0"
+  },
+  "overrides": {
+    "minimatch": "^10.2.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",

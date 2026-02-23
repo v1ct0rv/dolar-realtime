@@ -12,21 +12,21 @@ const ThemeContext = createContext<{
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('light');
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('dr-theme') as Theme | null;
-      const sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      applyTheme(stored ?? sys);
-    } catch {
-      // localStorage unavailable (e.g. private mode)
-    }
-  }, []);
-
   function applyTheme(t: Theme) {
     setTheme(t);
     document.documentElement.setAttribute('data-theme', t);
     try { localStorage.setItem('dr-theme', t); } catch {}
   }
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('dr-theme') as Theme | null;
+      const sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      applyTheme(stored ?? sys); // eslint-disable-line react-hooks/set-state-in-effect
+    } catch {
+      // localStorage unavailable (e.g. private mode)
+    }
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme: () => applyTheme(theme === 'dark' ? 'light' : 'dark') }}>

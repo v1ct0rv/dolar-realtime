@@ -42,7 +42,6 @@ export default function RootLayout({
       data-theme="light"
     >
       <head>
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script dangerouslySetInnerHTML={{ __html: noFlashScript }} />
       </head>
       <body className={`antialiased ${fraunces.variable} ${dmMono.variable} ${dmSans.variable}`}>
