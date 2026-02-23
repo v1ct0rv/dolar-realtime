@@ -3,11 +3,9 @@ name: Azure Static Web Apps CI/CD
 on:
   push:
     branches:
-      - feat/dolar-v2
+      - master
   pull_request:
     types: [opened, synchronize, reopened, closed]
-    branches:
-      - feat/dolar-v2
 
 jobs:
   build_and_deploy_job:
