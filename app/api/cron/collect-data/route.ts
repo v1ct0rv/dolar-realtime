@@ -75,11 +75,11 @@ export async function POST(request: NextRequest) {
     const dolarCollection = db.collection<DolarData>(COLLECTIONS.DOLAR_DATA);
     const trmCollection = db.collection<TRMData>(COLLECTIONS.TRM_DATA);
 
-    // Check if data has actually changed before inserting (avoid duplicates)
-    const lastRecord = await dolarCollection.findOne(
-      { date: dateFormatted },
-      { sort: { timestamp: -1 } },
-    );
+    // Fetch both queries in parallel before any conditional inserts
+    const [lastRecord, existingTRM] = await Promise.all([
+      dolarCollection.findOne({ date: dateFormatted }, { sort: { timestamp: -1 } }),
+      trmCollection.findOne({ date: dateFormatted }),
+    ]);
 
     // Convert time stats.time from 12-hour format (COT) to UTC
     // ICAP API returns time in 12-hour format without AM/PM indicator
@@ -149,8 +149,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if we need to update TRM for today
-    const existingTRM = await trmCollection.findOne({ date: dateFormatted });
-
     if (!existingTRM) {
       // Insert new TRM record (stored in UTC)
       const trmData: TRMData = {

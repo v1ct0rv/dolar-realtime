@@ -18,17 +18,31 @@ export async function GET() {
     );
     const today = colombiaTime.toISOString().split("T")[0];
 
-    // Get all records for today, sorted by timestamp
-    const records = await dolarCollection
+    // Try today's records first, fall back to the most recent available date
+    let records = await dolarCollection
       .find({ date: today })
       .sort({ timestamp: 1 })
       .toArray();
+
+    let dataDate = today;
+
+    if (records.length === 0) {
+      // Find the most recent record to determine the last available date
+      const lastRecord = await dolarCollection.findOne({}, { sort: { timestamp: -1 } });
+      if (lastRecord) {
+        dataDate = lastRecord.date;
+        records = await dolarCollection
+          .find({ date: dataDate })
+          .sort({ timestamp: 1 })
+          .toArray();
+      }
+    }
 
     if (records.length === 0) {
       return NextResponse.json<ApiResponse<null>>(
         {
           success: false,
-          error: "No intraday data available for today",
+          error: "No intraday data available",
         },
         { status: 404 },
       );
@@ -52,11 +66,8 @@ export async function GET() {
       monto,
     };
 
-    return NextResponse.json<ApiResponse<IntradayData>>(
-      {
-        success: true,
-        data,
-      },
+    return NextResponse.json(
+      { success: true, data, dataDate },
       {
         status: 200,
         headers: {

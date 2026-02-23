@@ -3,25 +3,102 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CurrentStats, IntradayData } from '@/types';
 import {
-  LineChart,
-  Line,
-  BarChart,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   ComposedChart,
   Area,
-  AreaChart,
 } from 'recharts';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { useTheme } from '../ThemeProvider';
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const getTodayColombiaDate = () =>
+  new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }))
+    .toISOString()
+    .split('T')[0];
+
+// ─── Chart color maps (hex values for Recharts SVG props) ─────────────────────
+const darkChart = {
+  gold: '#d4922a',
+  goldFill: 'rgba(212,146,42,0.22)',
+  blue: '#3a6fef',
+  blueFill: 'rgba(58,111,239,0.55)',
+  grid: 'rgba(20,31,51,0.9)',
+  tick: '#3d5269',
+  cardBg: '#090e1a',
+  border: '#141f33',
+  tooltipBg: 'rgba(9,14,26,0.97)',
+};
+const lightChart = {
+  gold: '#a8620c',
+  goldFill: 'rgba(168,98,12,0.15)',
+  blue: '#1842c0',
+  blueFill: 'rgba(24,66,192,0.45)',
+  grid: 'rgba(210,190,160,0.55)',
+  tick: '#9a8060',
+  cardBg: '#fdf8ef',
+  border: '#ddd0b8',
+  tooltipBg: 'rgba(253,248,239,0.97)',
+};
+
+type Trend = 'up' | 'down' | 'equal';
+
+// ─── Chart tooltip ────────────────────────────────────────────────────────────
+interface TooltipEntry { dataKey?: string; value?: number | string; }
+interface ChartTooltipProps {
+  active?: boolean;
+  payload?: readonly TooltipEntry[];
+  label?: string | number;
+  ch: typeof darkChart;
+}
+
+function ChartTooltip({ active, payload, label, ch }: ChartTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null;
+  const date = new Date(label as number);
+  const precioEntry = payload.find((p) => p.dataKey === 'precio');
+  const montoEntry = payload.find((p) => p.dataKey === 'monto');
+
+  return (
+    <div
+      style={{
+        background: ch.tooltipBg,
+        border: `1px solid ${ch.border}`,
+        borderRadius: 8,
+        padding: '10px 14px',
+        backdropFilter: 'blur(12px)',
+        minWidth: 140,
+      }}
+    >
+      <p style={{ color: ch.tick, fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.06em', marginBottom: 8 }}>
+        {format(date, 'HH:mm:ss')}
+      </p>
+      {precioEntry && precioEntry.value !== undefined && (
+        <p style={{ color: ch.gold, fontFamily: 'var(--font-mono)', fontSize: 17, fontWeight: 500, margin: '3px 0' }}>
+          ${(precioEntry.value as number).toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+        </p>
+      )}
+      {montoEntry && montoEntry.value !== undefined && (
+        <p style={{ color: ch.blue, fontFamily: 'var(--font-mono)', fontSize: 12, margin: '3px 0' }}>
+          USD {((montoEntry.value as number) / 1000).toFixed(0)}K
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 export default function RealTimeDashboard() {
+  const { theme } = useTheme();
+  const ch = theme === 'dark' ? darkChart : lightChart;
+
   const [stats, setStats] = useState<CurrentStats | null>(null);
   const [chartData, setChartData] = useState<IntradayData | null>(null);
+  const [dataDate, setDataDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
@@ -30,8 +107,6 @@ export default function RealTimeDashboard() {
   const fetchData = useCallback(async () => {
     try {
       setError(null);
-
-      // Fetch both current stats and intraday data in parallel
       const [statsResponse, chartResponse] = await Promise.all([
         fetch('/api/stats/current'),
         fetch('/api/stats/intraday'),
@@ -40,17 +115,19 @@ export default function RealTimeDashboard() {
       const statsData = await statsResponse.json();
       const chartDataResult = await chartResponse.json();
 
-      if (!statsData.success) {
-        throw new Error(statsData.error || 'Failed to fetch stats');
-      }
+      if (!statsData.success) throw new Error(statsData.error || 'Failed to fetch stats');
 
+      const fetchedDate = statsData.dataDate ?? null;
       setStats(statsData.data);
+      setDataDate(fetchedDate);
+      if (chartDataResult.success) setChartData(chartDataResult.data);
+      setLastUpdate(new Date());
 
-      if (chartDataResult.success) {
-        setChartData(chartDataResult.data);
+      // Disable live mode when data is not from today
+      if (fetchedDate && fetchedDate !== getTodayColombiaDate()) {
+        setAutoRefresh(false);
       }
 
-      setLastUpdate(new Date());
       setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -58,28 +135,31 @@ export default function RealTimeDashboard() {
     }
   }, []);
 
-  // Initial fetch
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Auto-refresh every 10 seconds
   useEffect(() => {
     if (!autoRefresh) return;
-
-    const interval = setInterval(() => {
-      fetchData();
-    }, 10000); // 10 seconds
-
+    const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
   }, [autoRefresh, fetchData]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Cargando datos en tiempo real...</p>
+      <div
+        role="status"
+        aria-label="Cargando datos en tiempo real"
+        style={{ background: 'var(--clr-bg-glow)', minHeight: 'calc(100vh - 52px)' }}
+        className="flex items-center justify-center"
+      >
+        <div className="text-center space-y-4">
+          <div
+            style={{ width: 40, height: 40, border: '2px solid var(--clr-border)', borderTopColor: 'var(--clr-gold)', borderRadius: '50%', margin: '0 auto' }}
+            className="motion-safe:animate-spin"
+            aria-hidden="true"
+          />
+          <p style={{ color: 'var(--clr-muted)', fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.1em' }}>
+            CARGANDO DATOS...
+          </p>
         </div>
       </div>
     );
@@ -87,22 +167,23 @@ export default function RealTimeDashboard() {
 
   if (error || !stats) {
     return (
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h3 className="text-red-800 font-semibold text-lg mb-2">Error</h3>
-          <p className="text-red-600 mb-4">{error || 'No data available'}</p>
+      <div style={{ background: 'var(--clr-bg-glow)', minHeight: 'calc(100vh - 52px)' }} className="flex items-center justify-center p-6">
+        <div style={{ background: 'var(--clr-card)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 12, padding: '28px 32px', maxWidth: 400 }}>
+          <h3 style={{ color: 'var(--clr-negative)', fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>
+            Error de conexión
+          </h3>
+          <p style={{ color: 'var(--clr-muted)', fontSize: 14, marginBottom: 20 }}>{error || 'Sin datos disponibles'}</p>
           <button
             onClick={fetchData}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+            style={{ background: 'var(--clr-gold)', color: 'var(--clr-bg)', borderRadius: 6, padding: '8px 18px', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 500, letterSpacing: '0.08em', cursor: 'pointer', border: 'none' }}
           >
-            Reintentar
+            REINTENTAR
           </button>
         </div>
       </div>
     );
   }
 
-  // Transform chart data for Recharts
   const chartDataTransformed = chartData
     ? chartData.precio.map((item, index) => ({
         timestamp: item[0],
@@ -111,300 +192,335 @@ export default function RealTimeDashboard() {
       }))
     : [];
 
-  return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Header with refresh controls */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Dashboard en Tiempo Real
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Dólar Interbancario Colombiano (COP/USD)
-          </p>
-        </div>
+  // Tight price domain
+  const priceDomain = (() => {
+    if (chartDataTransformed.length === 0) return ['auto', 'auto'] as const;
+    const prices = chartDataTransformed.map((d) => d.precio).filter((p) => p > 0);
+    if (prices.length === 0) return ['auto', 'auto'] as const;
+    const lo = Math.min(...prices);
+    const hi = Math.max(...prices);
+    const pad = Math.max((hi - lo) * 0.3, 5);
+    return [Math.floor(lo - pad), Math.ceil(hi + pad)] as [number, number];
+  })();
 
-        <div className="flex items-center gap-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            <span className="font-medium">Última actualización:</span>{" "}
-            {format(lastUpdate, "HH:mm:ss")}
+  const priceTrend: Trend =
+    stats.openPrice < stats.price ? 'up' : stats.openPrice > stats.price ? 'down' : 'equal';
+
+  return (
+    <div style={{ background: 'var(--clr-bg-glow)', minHeight: 'calc(100vh - 52px)', color: 'var(--clr-text)' }}>
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+
+        {/* ── Header ── */}
+        <header className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div style={{ animation: 'card-enter 0.5s ease-out both' }}>
+            <p style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--clr-muted)', marginBottom: 6 }}>
+              COP / USD · Mercado Interbancario
+            </p>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 34, fontWeight: 600, lineHeight: 1.1, color: 'var(--clr-text)' }}>
+              Dashboard en Tiempo Real
+            </h1>
           </div>
 
-          <button
-            onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
-              autoRefresh
-                ? "bg-green-100 text-green-700 hover:bg-green-200"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            {autoRefresh ? "🟢 Auto-Refresh ON" : "⚪ Auto-Refresh OFF"}
-          </button>
+          <div className="flex items-center gap-3" style={{ animation: 'card-enter 0.5s ease-out 80ms both' }}>
+            <span style={{ color: 'var(--clr-muted)', fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.04em' }}>
+              {format(lastUpdate, 'HH:mm:ss')}
+            </span>
 
-          <button
-            onClick={fetchData}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            🔄 Actualizar
-          </button>
-        </div>
-      </div>
+            {(() => {
+              const isToday = !dataDate || dataDate === getTodayColombiaDate();
+              if (!isToday) {
+                return (
+                  <span
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 7, padding: '6px 13px', borderRadius: 20,
+                      border: '1px solid var(--clr-border)',
+                      background: 'var(--clr-card)',
+                      color: 'var(--clr-muted)',
+                      fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.1em',
+                    }}
+                  >
+                    <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--clr-muted)', display: 'inline-block', flexShrink: 0 }} />
+                    HISTÓRICO
+                  </span>
+                );
+              }
+              return (
+                <button
+                  onClick={() => setAutoRefresh(!autoRefresh)}
+                  aria-pressed={autoRefresh}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 7, padding: '6px 13px', borderRadius: 20,
+                    border: `1px solid ${autoRefresh ? 'rgba(34,197,94,0.3)' : 'var(--clr-border)'}`,
+                    background: autoRefresh ? 'rgba(34,197,94,0.07)' : 'var(--clr-card)',
+                    color: autoRefresh ? 'var(--clr-positive)' : 'var(--clr-muted)',
+                    fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.1em', cursor: 'pointer',
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{ width: 6, height: 6, borderRadius: '50%', background: autoRefresh ? 'var(--clr-positive)' : 'var(--clr-muted)', display: 'inline-block', animation: autoRefresh ? 'pulse-dot 1.5s ease-in-out infinite' : 'none', flexShrink: 0 }}
+                  />
+                  {autoRefresh ? 'LIVE' : 'PAUSED'}
+                </button>
+              );
+            })()}
 
-      {/* Main Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatsCard
-          title="Dólar Set-FX"
-          subtitle="Cierre"
-          value={formatCurrency(stats.price)}
-          trend={
-            stats.openPrice < stats.price
-              ? "up"
-              : stats.openPrice > stats.price
-                ? "down"
-                : "equal"
-          }
-        />
-        <StatsCard
-          title="TRM Oficial"
-          subtitle="Tasa Representativa del Mercado"
-          value={formatCurrency(stats.trm)}
-          trend={stats.trmPriceChange}
-        />
-        <StatsCard
-          title="Promedio"
-          subtitle="Precio promedio del día"
-          value={formatCurrency(stats.avgPrice)}
-          trend="equal"
-        />
-      </div>
-
-      {/* Price Details */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-            Precios del Dólar
-          </h2>
-          <dl className="space-y-3">
-            <DetailRow
-              label="Apertura"
-              value={formatCurrency(stats.openPrice)}
-              trend={stats.openPriceChange}
-            />
-            <DetailRow
-              label="Mínimo"
-              value={formatCurrency(stats.minPrice)}
-              trend={stats.minPriceChange}
-            />
-            <DetailRow
-              label="Máximo"
-              value={formatCurrency(stats.maxPrice)}
-              trend={stats.maxPriceChange}
-            />
-            <DetailRow
-              label="Cierre"
-              value={formatCurrency(stats.price)}
-              trend="equal"
-            />
-          </dl>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-            Volumen USD
-          </h2>
-          <dl className="space-y-3">
-            <DetailRow
-              label="Negociado Total"
-              value={formatVolume(stats.totalAmount)}
-            />
-            <DetailRow
-              label="Promedio por Transacción"
-              value={formatVolume(stats.avgAmount)}
-            />
-            <DetailRow
-              label="Transacciones"
-              value={stats.transactions.toString()}
-            />
-          </dl>
-        </div>
-      </div>
-
-      {/* Intraday Chart */}
-      {chartDataTransformed.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-            Dólar Spot
-          </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Fuente: https://dolar.set-icap.com/
-          </p>
-          <ResponsiveContainer width="100%" height={500}>
-            <ComposedChart
-              data={chartDataTransformed}
-              margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+            <button
+              onClick={fetchData}
+              style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid var(--clr-border)', background: 'transparent', color: 'var(--clr-muted)', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.1em', cursor: 'pointer' }}
             >
-              <defs>
-                <linearGradient id="colorPrecio" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#4F46E5" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis
-                dataKey="timestamp"
-                tickFormatter={(timestamp) =>
-                  format(new Date(timestamp), "hh:mm a")
-                }
-                tick={{ fill: "#6b7280", fontSize: 12 }}
-                axisLine={{ stroke: "#d1d5db" }}
-              />
-              <YAxis
-                yAxisId="left"
-                orientation="left"
-                tick={{ fill: "#6b7280", fontSize: 12 }}
-                axisLine={{ stroke: "#d1d5db" }}
-                label={{
-                  value: "Monto (Miles USD)",
-                  angle: -90,
-                  position: "insideLeft",
-                  style: { fill: "#6b7280", fontSize: 12 },
-                }}
-              />
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                tick={{ fill: "#6b7280", fontSize: 12 }}
-                axisLine={{ stroke: "#d1d5db" }}
-                label={{
-                  value: "Precio",
-                  angle: 90,
-                  position: "insideRight",
-                  style: { fill: "#6b7280", fontSize: 12 },
-                }}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "8px",
-                  padding: "8px 12px",
-                }}
-                labelStyle={{
-                  color: "#1f2937",
-                  fontWeight: "600",
-                  marginBottom: "4px",
-                }}
-                labelFormatter={(timestamp) => {
-                  const date = new Date(timestamp as number);
-                  return format(date, "EEEE, MMM d, hh:mm:ss a");
-                }}
-                formatter={(value: number, name: string) => {
-                  if (name === "Precio") {
-                    return [
-                      `$${value.toLocaleString("es-CO", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`,
-                      "Precio",
-                    ];
-                  }
-                  return [`USD$${(value / 1000).toFixed(0)}K`, "Monto"];
-                }}
-              />
-              <Legend verticalAlign="top" height={36} iconType="circle" />
-              <Bar
-                yAxisId="left"
-                dataKey="monto"
-                fill="#93c5fd"
-                name="Monto"
-                opacity={0.7}
-                radius={[4, 4, 0, 0]}
-              />
-              <Area
-                yAxisId="right"
-                type="monotone"
-                dataKey="precio"
-                stroke="#4F46E5"
-                strokeWidth={2}
-                fill="url(#colorPrecio)"
-                name="Precio"
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
+              ↻ ACTUALIZAR
+            </button>
+          </div>
+        </header>
+
+        {/* Gold divider */}
+        <div style={{ height: 1, background: 'var(--clr-divider)' }} />
+
+        {/* ── Yesterday notice ── */}
+        {dataDate && (() => {
+          const nowUTC = new Date();
+          const colombiaDate = new Date(nowUTC.toLocaleString('en-US', { timeZone: 'America/Bogota' })).toISOString().split('T')[0];
+          if (dataDate === colombiaDate) return null;
+          return (
+            <div
+              role="status"
+              style={{
+                background: 'rgba(212,146,42,0.08)',
+                border: '1px solid rgba(212,146,42,0.25)',
+                borderRadius: 8,
+                padding: '10px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                animation: 'card-enter 0.4s ease-out both',
+              }}
+            >
+              <span style={{ color: 'var(--clr-gold)', fontSize: 14 }} aria-hidden="true">◈</span>
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--clr-gold)', letterSpacing: '0.04em' }}>
+                Sin datos para hoy — mostrando cierre del{' '}
+                <strong>{format(parseISO(dataDate), "EEEE d 'de' MMMM", { locale: es })}</strong>
+              </p>
+            </div>
+          );
+        })()}
+
+        {/* ── Stats Cards ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <StatsCard title="Dólar Set-FX" subtitle="Cierre del mercado" value={formatCurrency(stats.price)} trend={priceTrend} primary animationDelay={0} />
+          <StatsCard title="TRM Oficial" subtitle="Tasa Representativa del Mercado" value={formatCurrency(stats.trm)} trend={stats.trmPriceChange} animationDelay={80} />
+          <StatsCard title="Precio Promedio" subtitle="Promedio del día" value={formatCurrency(stats.avgPrice)} trend="equal" animationDelay={160} />
         </div>
-      )}
-    </div>
-  );
-}
 
-interface StatsCardProps {
-  title: string;
-  subtitle: string;
-  value: string;
-  trend: 'up' | 'down' | 'equal';
-}
+        {/* ── Detail Panels ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <DetailPanel title="Precios del Dólar" animationDelay={240}>
+            <DetailRow label="Apertura" value={formatCurrency(stats.openPrice)} trend={stats.openPriceChange} />
+            <DetailRow label="Mínimo" value={formatCurrency(stats.minPrice)} trend={stats.minPriceChange} />
+            <DetailRow label="Máximo" value={formatCurrency(stats.maxPrice)} trend={stats.maxPriceChange} />
+            <DetailRow label="Cierre" value={formatCurrency(stats.price)} />
+          </DetailPanel>
 
-function StatsCard({ title, subtitle, value, trend }: StatsCardProps) {
-  const trendColors = {
-    up: 'text-green-600',
-    down: 'text-red-600',
-    equal: 'text-gray-600',
-  };
+          <DetailPanel title="Volumen USD" animationDelay={320}>
+            <DetailRow label="Negociado Total" value={formatVolume(stats.totalAmount)} />
+            <DetailRow label="Promedio por Transacción" value={formatVolume(stats.avgAmount)} />
+            <DetailRow label="Transacciones" value={stats.transactions.toString()} />
+          </DetailPanel>
+        </div>
 
-  const trendIcons = {
-    up: '↑',
-    down: '↓',
-    equal: '→',
-  };
+        {/* ── Intraday Chart ── */}
+        {chartDataTransformed.length > 0 && (
+          <div
+            style={{
+              background: 'var(--clr-card)',
+              border: '1px solid var(--clr-border)',
+              borderRadius: 12,
+              padding: '24px 24px 20px',
+              animation: 'card-enter 0.6s ease-out 400ms both',
+            }}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 600, color: 'var(--clr-text)', marginBottom: 4 }}>
+                  Dólar Spot Intradiario
+                </h2>
+                <a href="https://dolar.set-icap.com/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--clr-muted)', fontFamily: 'var(--font-mono)', fontSize: 11, textDecoration: 'none', letterSpacing: '0.04em' }}>
+                  dolar.set-icap.com
+                </a>
+              </div>
 
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">{title}</div>
-      <div className="flex items-baseline gap-2 mb-1">
-        <div className="text-3xl font-bold text-gray-900 dark:text-white">{value}</div>
-        <span className={`text-2xl ${trendColors[trend]}`}>{trendIcons[trend]}</span>
+              <div className="flex items-center gap-5">
+                <span className="flex items-center gap-2" style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--clr-muted)', letterSpacing: '0.1em' }}>
+                  <span style={{ display: 'inline-block', width: 22, height: 2, background: ch.gold, borderRadius: 1 }} />
+                  PRECIO
+                </span>
+                <span className="flex items-center gap-2" style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--clr-muted)', letterSpacing: '0.1em' }}>
+                  <span style={{ display: 'inline-block', width: 12, height: 10, background: ch.blue, borderRadius: 2, opacity: 0.6 }} />
+                  MONTO
+                </span>
+              </div>
+            </div>
+
+            <ResponsiveContainer width="100%" height={420}>
+              <ComposedChart data={chartDataTransformed} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={ch.gold} stopOpacity={0.22} />
+                    <stop offset="95%" stopColor={ch.gold} stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={ch.blue} stopOpacity={0.65} />
+                    <stop offset="100%" stopColor={ch.blue} stopOpacity={0.15} />
+                  </linearGradient>
+                </defs>
+
+                <CartesianGrid stroke={ch.grid} horizontal vertical={false} strokeDasharray="1 4" />
+
+                <XAxis
+                  dataKey="timestamp"
+                  tickFormatter={(ts) => format(new Date(ts), 'HH:mm')}
+                  tick={{ fill: ch.tick, fontSize: 11, fontFamily: 'var(--font-mono)' }}
+                  axisLine={{ stroke: ch.border }}
+                  tickLine={false}
+                />
+                <YAxis
+                  yAxisId="left"
+                  orientation="left"
+                  tick={{ fill: ch.tick, fontSize: 11, fontFamily: 'var(--font-mono)' }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`}
+                  width={46}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  domain={priceDomain}
+                  tick={{ fill: ch.tick, fontSize: 11, fontFamily: 'var(--font-mono)' }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => `$${v.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`}
+                  width={82}
+                />
+
+                <Tooltip
+                  content={(props) => <ChartTooltip {...props} ch={ch} />}
+                  cursor={{ stroke: ch.border, strokeWidth: 1, strokeDasharray: '3 3' }}
+                />
+
+                <Bar yAxisId="left" dataKey="monto" fill="url(#barGradient)" name="Monto" radius={[3, 3, 0, 0]} />
+                <Area
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="precio"
+                  stroke={ch.gold}
+                  strokeWidth={2}
+                  fill="url(#priceGradient)"
+                  name="Precio"
+                  dot={false}
+                  activeDot={{ stroke: ch.gold, fill: ch.cardBg, strokeWidth: 2, r: 5 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
-      <div className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</div>
     </div>
   );
 }
 
-interface DetailRowProps {
-  label: string;
-  value: string;
-  trend?: 'up' | 'down' | 'equal';
+// ─── StatsCard ─────────────────────────────────────────────────────────────────
+interface StatsCardProps {
+  title: string; subtitle: string; value: string;
+  trend: Trend; primary?: boolean; animationDelay?: number;
 }
 
-function DetailRow({ label, value, trend }: DetailRowProps) {
-  const trendIcons = {
-    up: '↑',
-    down: '↓',
-    equal: '→',
-  };
-
-  const trendColors = {
-    up: 'text-green-600',
-    down: 'text-red-600',
-    equal: 'text-gray-400',
-  };
+function StatsCard({ title, subtitle, value, trend, primary = false, animationDelay = 0 }: StatsCardProps) {
+  const trendColor = trend === 'up' ? 'var(--clr-positive)' : trend === 'down' ? 'var(--clr-negative)' : 'var(--clr-muted)';
+  const trendSymbol = trend === 'up' ? '↑' : trend === 'down' ? '↓' : '—';
+  const trendLabel = trend === 'up' ? 'En alza' : trend === 'down' ? 'En baja' : 'Sin cambio';
 
   return (
-    <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
-      <dt className="text-gray-600 dark:text-gray-400">{label}:</dt>
-      <dd className="flex items-center gap-2">
-        <span className="font-semibold text-gray-900 dark:text-white">{value}</span>
+    <div
+      style={{
+        background: 'var(--clr-card)',
+        border: '1px solid var(--clr-border)',
+        borderTop: primary ? '2px solid var(--clr-gold)' : '1px solid var(--clr-border)',
+        borderRadius: 12,
+        padding: '20px 24px',
+        animation: 'card-enter 0.5s ease-out both',
+        animationDelay: `${animationDelay}ms`,
+      }}
+    >
+      <p style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: primary ? 'var(--clr-gold)' : 'var(--clr-muted)', marginBottom: 12 }}>
+        {title}
+      </p>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 500, color: 'var(--clr-text)', letterSpacing: '-0.02em' }}>
+          {value}
+        </span>
+        <span style={{ fontSize: 18, color: trendColor }} aria-hidden="true">{trendSymbol}</span>
+        <span className="sr-only">{trendLabel}</span>
+      </div>
+      <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--clr-muted)', letterSpacing: '0.03em' }}>
+        {subtitle}
+      </p>
+    </div>
+  );
+}
+
+// ─── DetailPanel ──────────────────────────────────────────────────────────────
+function DetailPanel({ title, children, animationDelay = 0 }: { title: string; children: React.ReactNode; animationDelay?: number }) {
+  return (
+    <div
+      style={{
+        background: 'var(--clr-card)',
+        border: '1px solid var(--clr-border)',
+        borderRadius: 12,
+        padding: '20px 24px',
+        animation: 'card-enter 0.5s ease-out both',
+        animationDelay: `${animationDelay}ms`,
+      }}
+    >
+      <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 600, color: 'var(--clr-text)', marginBottom: 16 }}>
+        {title}
+      </h2>
+      <dl>{children}</dl>
+    </div>
+  );
+}
+
+// ─── DetailRow ────────────────────────────────────────────────────────────────
+function DetailRow({ label, value, trend }: { label: string; value: string; trend?: Trend }) {
+  const trendColor = !trend ? 'transparent' : trend === 'up' ? 'var(--clr-positive)' : trend === 'down' ? 'var(--clr-negative)' : 'var(--clr-muted)';
+  const trendSymbol = !trend ? '' : trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→';
+  const trendLabel = !trend ? '' : trend === 'up' ? 'alza' : trend === 'down' ? 'baja' : 'sin cambio';
+
+  return (
+    <div
+      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--clr-border)' }}
+      className="last:border-b-0"
+    >
+      <dt style={{ color: 'var(--clr-muted)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>{label}</dt>
+      <dd style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ color: 'var(--clr-text)', fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 500 }}>{value}</span>
         {trend && (
-          <span className={`text-sm ${trendColors[trend]}`}>{trendIcons[trend]}</span>
+          <>
+            <span style={{ color: trendColor, fontSize: 12 }} aria-hidden="true">{trendSymbol}</span>
+            <span className="sr-only">{trendLabel}</span>
+          </>
         )}
       </dd>
     </div>
   );
 }
 
+// ─── Formatters ───────────────────────────────────────────────────────────────
 function formatCurrency(value: number): string {
   return `$${value.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatVolume(value: number): string {
-  if (value >= 1000000) {
-    return `$${(value / 1000000).toFixed(2)}M`;
-  }
+  if (value >= 1000000) return `$${(value / 1000000).toFixed(2)}M`;
   return `$${value.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`;
 }

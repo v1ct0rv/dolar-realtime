@@ -102,6 +102,68 @@ export interface TRMAnalysisReport {
   alerts: TRMAnalysisAlert[];
 }
 
+// Historical Report Types
+export interface HistoricalDayData {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  avgPrice: number;
+  volume: number;
+  transactions: number;
+  trm: number | null;
+  deviation: number | null;
+}
+
+export interface HistoricalSummary {
+  minPrice: number;
+  maxPrice: number;
+  avgPrice: number;
+  firstOpen: number;
+  lastClose: number;
+  priceChange: number;
+  priceChangePercent: number;
+  totalVolume: number;
+  tradingDays: number;
+}
+
+export interface HistoricalReport {
+  dateRange: { start: string; end: string };
+  summary: HistoricalSummary;
+  dailyData: HistoricalDayData[];
+}
+
+// TRM History Report Types
+export interface TRMHistoryDayData {
+  date: string;
+  value: number;
+  change: 'up' | 'down' | 'equal';
+  previousValue: number | null;
+  delta: number | null;
+  deltaPercent: number | null;
+}
+
+export interface TRMHistorySummary {
+  firstValue: number;
+  lastValue: number;
+  minValue: number;
+  maxValue: number;
+  avgValue: number;
+  totalChange: number;
+  totalChangePercent: number;
+  daysUp: number;
+  daysDown: number;
+  daysEqual: number;
+  tradingDays: number;
+}
+
+export interface TRMHistoryReport {
+  dateRange: { start: string; end: string };
+  summary: TRMHistorySummary;
+  dailyData: TRMHistoryDayData[];
+}
+
 // API Response types
 export interface ApiResponse<T> {
   success: boolean;

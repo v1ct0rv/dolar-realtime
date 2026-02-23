@@ -3,6 +3,8 @@ import { getDatabase, COLLECTIONS } from '@/lib/mongodb';
 import { getTRMAnalysisPipeline, getTRMSummaryPipeline } from '@/lib/aggregations';
 import { TRMAnalysisReport, ApiResponse } from '@/types';
 
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
  * GET /api/reports/trm-analysis
  * Query params: startDate (YYYY-MM-DD), endDate (YYYY-MM-DD)
@@ -25,8 +27,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Validate date format
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
+    if (!DATE_REGEX.test(startDate) || !DATE_REGEX.test(endDate)) {
       return NextResponse.json<ApiResponse<null>>(
         {
           success: false,

@@ -358,6 +358,68 @@ export function getVolumeByHourPipeline(startDate: string, endDate: string): Doc
 }
 
 /**
+ * Historical Daily Data Pipeline
+ * Returns OHLC + volume + TRM per trading day for a date range
+ */
+export function getHistoricalDailyPipeline(startDate: string, endDate: string): Document[] {
+  return [
+    {
+      $match: {
+        date: { $gte: startDate, $lte: endDate },
+      },
+    },
+    {
+      $group: {
+        _id: '$date',
+        open: { $first: '$openPrice' },
+        high: { $last: '$maxPrice' },      // accumulated max — last record has final value
+        low: { $last: '$minPrice' },       // accumulated min — last record has final value
+        close: { $last: '$price' },
+        avgPrice: { $last: '$avgPrice' },
+        volume: { $last: '$volume' },
+        transactions: { $last: '$transactions' },
+      },
+    },
+    { $sort: { _id: 1 } },
+    {
+      $lookup: {
+        from: 'trmData',
+        localField: '_id',
+        foreignField: 'date',
+        as: 'trmInfo',
+      },
+    },
+    {
+      $unwind: {
+        path: '$trmInfo',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        date: '$_id',
+        open: 1,
+        high: 1,
+        low: 1,
+        close: 1,
+        avgPrice: 1,
+        volume: 1,
+        transactions: 1,
+        trm: { $ifNull: ['$trmInfo.value', null] },
+        deviation: {
+          $cond: {
+            if: { $ifNull: ['$trmInfo.value', false] },
+            then: { $subtract: ['$close', '$trmInfo.value'] },
+            else: null,
+          },
+        },
+      },
+    },
+  ];
+}
+
+/**
  * Monthly Overview Pipeline
  */
 export function getMonthlyOverviewPipeline(year: number, month: number): Document[] {

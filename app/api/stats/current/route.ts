@@ -19,34 +19,46 @@ export async function GET() {
     );
     const today = colombiaTime.toISOString().split('T')[0];
 
-    // Get the most recent record for today
-    const latestRecord = await dolarCollection.findOne(
-      { date: today },
-      { sort: { timestamp: -1 } }
-    );
-
-    if (!latestRecord) {
-      return NextResponse.json<ApiResponse<null>>(
-        {
-          success: false,
-          error: 'No data available for today',
-        },
-        { status: 404 }
-      );
-    }
-
-    // Get today's TRM
-    const trmRecord = await trmCollection.findOne({ date: today });
-
-    // Get yesterday's record for comparison
+    // Get yesterday's date for comparison
     const yesterday = new Date(colombiaTime);
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayDate = yesterday.toISOString().split('T')[0];
 
-    const yesterdayRecord = await dolarCollection.findOne(
-      { date: yesterdayDate },
-      { sort: { timestamp: -1 } }
-    );
+    // Try today first, then fall back to the most recent available record
+    const [todayRecord, trmRecord] = await Promise.all([
+      dolarCollection.findOne({ date: today }, { sort: { timestamp: -1 } }),
+      trmCollection.findOne({ date: today }),
+    ]);
+
+    let latestRecord = todayRecord;
+    let dataDate = today;
+    let activeTrm = trmRecord;
+    let comparisonRecord = await dolarCollection.findOne({ date: yesterdayDate }, { sort: { timestamp: -1 } });
+
+    if (!latestRecord) {
+      // Find the most recent record regardless of date
+      latestRecord = await dolarCollection.findOne({}, { sort: { timestamp: -1 } });
+
+      if (!latestRecord) {
+        return NextResponse.json<ApiResponse<null>>(
+          { success: false, error: 'No data available' },
+          { status: 404 }
+        );
+      }
+
+      dataDate = latestRecord.date;
+
+      // For comparison, fetch the most recent record from a prior date
+      comparisonRecord = await dolarCollection.findOne(
+        { date: { $lt: dataDate } },
+        { sort: { timestamp: -1 } }
+      );
+
+      // TRM for the last available date (yesterday query may already cover it)
+      if (!activeTrm) {
+        activeTrm = await trmCollection.findOne({ date: dataDate });
+      }
+    }
 
     // Calculate change indicators
     const calculateChange = (current: number, previous: number | undefined): 'up' | 'down' | 'equal' => {
@@ -57,38 +69,26 @@ export async function GET() {
     };
 
     const stats: CurrentStats = {
-      trm: trmRecord?.value || latestRecord.price,
-      trmPriceChange: trmRecord?.change || "equal",
+      trm: activeTrm?.value || latestRecord.price,
+      trmPriceChange: activeTrm?.change || "equal",
       price: latestRecord.price,
       openPrice: latestRecord.openPrice,
       minPrice: latestRecord.minPrice,
       maxPrice: latestRecord.maxPrice,
       avgPrice: latestRecord.avgPrice,
-      maxPriceChange: calculateChange(
-        latestRecord.maxPrice,
-        yesterdayRecord?.maxPrice,
-      ),
-      minPriceChange: calculateChange(
-        latestRecord.minPrice,
-        yesterdayRecord?.minPrice,
-      ),
-      openPriceChange: calculateChange(
-        latestRecord.openPrice,
-        yesterdayRecord?.openPrice,
-      ),
+      maxPriceChange: calculateChange(latestRecord.maxPrice, comparisonRecord?.maxPrice),
+      minPriceChange: calculateChange(latestRecord.minPrice, comparisonRecord?.minPrice),
+      openPriceChange: calculateChange(latestRecord.openPrice, comparisonRecord?.openPrice),
       totalAmount: latestRecord.volume,
       latestAmount: latestRecord.volume,
       avgAmount: latestRecord.volume / (latestRecord.transactions || 1),
-      minAmount: 0, // Not tracked individually
-      maxAmount: 0, // Not tracked individually
+      minAmount: 0,
+      maxAmount: 0,
       transactions: latestRecord.transactions,
     };
 
-    return NextResponse.json<ApiResponse<CurrentStats>>(
-      {
-        success: true,
-        data: stats,
-      },
+    return NextResponse.json(
+      { success: true, data: stats, dataDate },
       {
         status: 200,
         headers: {

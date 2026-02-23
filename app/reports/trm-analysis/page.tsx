@@ -1,4 +1,8 @@
-import TRMAnalysisDashboard from '@/app/components/reports/TRMAnalysisDashboard';
+import dynamic from 'next/dynamic';
+
+const TRMAnalysisDashboard = dynamic(
+  () => import('@/app/components/reports/TRMAnalysisDashboard')
+);
 
 export const metadata = {
   title: 'Análisis TRM - Dólar Realtime',

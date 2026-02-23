@@ -1,27 +1,79 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ── Theme: Dark (default) ───────────────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  --clr-bg: #050810;
+  --clr-bg-glow: radial-gradient(ellipse at 15% 40%, rgba(212, 146, 42, 0.05) 0%, #050810 55%);
+  --clr-card: #090e1a;
+  --clr-card-rgb: 9, 14, 26;
+  --clr-border: #141f33;
+  --clr-gold: #d4922a;
+  --clr-blue: #3a6fef;
+  --clr-text: #c8d8e8;
+  --clr-muted: #3d5269;
+  --clr-positive: #22c55e;
+  --clr-negative: #ef4444;
+  --clr-divider: linear-gradient(90deg, #d4922a 0%, rgba(212, 146, 42, 0.25) 35%, transparent 65%);
+  --clr-nav-bg: rgba(9, 14, 26, 0.92);
+
+  /* Legacy aliases (Tailwind utilities) */
+  --background: #050810;
+  --foreground: #c8d8e8;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Theme: Light ────────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --clr-bg: #f4ede0;
+  --clr-bg-glow: radial-gradient(ellipse at 15% 40%, rgba(168, 98, 12, 0.07) 0%, #f4ede0 55%);
+  --clr-card: #fdf8ef;
+  --clr-card-rgb: 253, 248, 239;
+  --clr-border: #ddd0b8;
+  --clr-gold: #a8620c;
+  --clr-blue: #1842c0;
+  --clr-text: #1c1208;
+  --clr-muted: #9a8060;
+  --clr-positive: #15803d;
+  --clr-negative: #b91c1c;
+  --clr-divider: linear-gradient(90deg, #a8620c 0%, rgba(168, 98, 12, 0.25) 35%, transparent 65%);
+  --clr-nav-bg: rgba(253, 248, 239, 0.92);
+
+  --background: #f4ede0;
+  --foreground: #1c1208;
 }
 
+/* ── Base ────────────────────────────────────────────────────────────────── */
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--clr-text);
+  background: var(--clr-bg);
+  font-family: var(--font-body, system-ui, sans-serif);
 }
 
+/* ── Animations ──────────────────────────────────────────────────────────── */
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.25; transform: scale(0.75); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Utilities ───────────────────────────────────────────────────────────── */
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .text-balance { text-wrap: balance; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

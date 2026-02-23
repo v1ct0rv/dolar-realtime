@@ -1,4 +1,8 @@
-import RealTimeDashboard from '@/app/components/dashboard/RealTimeDashboard';
+import dynamic from 'next/dynamic';
+
+const RealTimeDashboard = dynamic(
+  () => import('@/app/components/dashboard/RealTimeDashboard')
+);
 
 export const metadata = {
   title: 'Dashboard en Tiempo Real - Dólar Realtime',
