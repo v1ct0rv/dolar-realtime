@@ -86,8 +86,24 @@ export async function POST(request: NextRequest) {
     // Market hours are 8 AM - 1:30 PM COT, so:
     // - Hours 08-12 are AM (8:00-12:59)
     // - Hours 01 are PM (13:00-13:59) since market closes at 1:30 PM
-    const [statsHoursStr, statsMinutes, statsSeconds = "0"] =
-      stats.time.split(":");
+    console.log("Raw stats.time from ICAP:", stats.time);
+
+    const timeParts = stats.time?.split(":");
+    if (
+      !stats.time ||
+      timeParts.length < 2 ||
+      timeParts.some((p) => p === "" || isNaN(parseInt(p, 10)))
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Invalid time format from ICAP: ${stats.time}, raw response: ${stats}`,
+        },
+        { status: 500 },
+      );
+    }
+
+    const [statsHoursStr, statsMinutes, statsSeconds = "0"] = timeParts;
     let statsHours = parseInt(statsHoursStr, 10);
 
     // If hour is 1-7, it must be PM (add 12 to convert to 24-hour format)
@@ -106,6 +122,7 @@ export async function POST(request: NextRequest) {
         parseInt(statsSeconds, 10),
       ),
     );
+    console.log("Converted stats time to UTC:", statsDateUTC);
     stats.time = statsDateUTC.toISOString().split("T")[1].split(".")[0]; // Update to UTC time
 
     // Compare critical fields to detect if data changed
