@@ -43,12 +43,22 @@ function parseNumeric(value: string | number): number {
   return parseFloat(value.replace(/,/g, ''));
 }
 
-export interface ICAPChartData {
-  labels: string[]; // Time labels like "09:00", "09:15", etc.
-  datasets: Array<{
-    label: string;
-    data: number[];
-  }>;
+/**
+ * A single transaction data point parsed from the ICAP chart endpoint.
+ * All accumulated fields (minPrice, maxPrice, avgPrice, volume, transactions)
+ * reflect the running state up to and including this data point, matching
+ * the shape stored by the collect-data cron into dolarData.
+ */
+export interface ICAPIntradayPoint {
+  cotTime: string;      // Original label time HH:MM:SS in COT (America/Bogota)
+  price: number;        // Closing price of this transaction
+  amount: number;       // Amount of this transaction in USD (labels are in miles USD × 1000)
+  openPrice: number;    // Opening price of the day (first price in the series)
+  minPrice: number;     // Running accumulated minimum up to this point
+  maxPrice: number;     // Running accumulated maximum up to this point
+  avgPrice: number;     // Running accumulated average up to this point
+  volume: number;       // Running accumulated volume in USD up to this point
+  transactions: number; // Count of transactions including this one (1-indexed)
 }
 
 /**
@@ -118,24 +128,23 @@ export async function fetchVolumeMarketStats(date: string): Promise<ICAPVolumeMa
 }
 
 /**
- * Fetch intraday chart data
+ * Fetch and parse intraday chart data from ICAP.
+ * Returns one ICAPIntradayPoint per transaction label, with all fields
+ * derived and accumulated so each point can be directly mapped to DolarData.
+ *
+ * Amount labels from ICAP are "Montos (Miles USD)" — multiplied by 1000 here.
+ * Times in cotTime are in Colombia time (COT, UTC-5).
  */
-export async function fetchIntradayChartData(date: string): Promise<ICAPChartData> {
+export async function fetchIntradayChartData(date: string): Promise<ICAPIntradayPoint[]> {
   try {
     const response = await axios.post(
       `${ICAP_BASE_URL}/graficos/graficoMoneda/`,
-      {
-        fecha: date,
-        moneda: 1,
-        delay: '15',
-      },
+      { fecha: date, moneda: 1, delay: '15' },
       { headers }
     );
 
-    // Parse the malformed JSON from ICAP
     const rawData = response.data.result[0].datos_grafico_moneda_mercado;
 
-    // Transform the data using regex replacements (same logic as legacy app)
     const correctJson = rawData
       .replace(/'/g, '"')
       .replace(/\d{2}:\d{2}(:\d{2})*/gi, (match: string) => `"${match}"`)
@@ -145,9 +154,43 @@ export async function fetchIntradayChartData(date: string): Promise<ICAPChartDat
       .replace(/labels:/g, '"labels":')
       .replace(/datasets:/g, '"datasets":');
 
-    const parsedData = JSON.parse(`{${correctJson}}`);
+    const parsed = JSON.parse(`{${correctJson}}`).data as {
+      labels: string[];
+      datasets: Array<{ label: string; data: number[] }>;
+    };
 
-    return parsedData.data;
+    const prices      = parsed.datasets[0].data; // "Precios de cierre"
+    const mileAmounts = parsed.datasets[1].data; // "Montos (Miles USD)"
+    const labels      = parsed.labels;           // HH:MM:SS in COT
+
+    if (prices.length !== labels.length || prices.length !== mileAmounts.length) {
+      throw new Error('ICAP chart data arrays have mismatched lengths');
+    }
+
+    const openPrice = prices[0];
+    let runningMin    = prices[0];
+    let runningMax    = prices[0];
+    let runningSum    = 0;
+    let runningVolume = 0;
+
+    return prices.map((price, i) => {
+      runningMin     = Math.min(runningMin, price);
+      runningMax     = Math.max(runningMax, price);
+      runningSum    += price;
+      runningVolume += mileAmounts[i] * 1000;
+
+      return {
+        cotTime:      labels[i],
+        price,
+        amount:       mileAmounts[i] * 1000,
+        openPrice,
+        minPrice:     runningMin,
+        maxPrice:     runningMax,
+        avgPrice:     runningSum / (i + 1),
+        volume:       runningVolume,
+        transactions: i + 1,
+      };
+    });
   } catch (error) {
     console.error('Error fetching intraday chart data:', error);
     throw new Error('Failed to fetch intraday chart data from ICAP');

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "appUrl":     { "type": "string" },
+    "cronSecret": { "type": "securestring" }
+  },
+  "triggers": {
+    "Recurrence": {
+      "type": "Recurrence",
+      "recurrence": { "frequency": "Minute", "interval": 5 }
+    }
+  },
+  "actions": {
+    "Check_market_hours": {
+      "type": "If",
+      "runAfter": {},
+      "expression": {
+        "and": [
+          {
+            "or": [
+              { "greaterOrEquals": [ "@int(formatDateTime(utcNow(), 'HH'))", 13 ] },
+              {
+                "and": [
+                  { "equals":        [ "@int(formatDateTime(utcNow(), 'HH'))", 12 ] },
+                  { "greaterOrEquals": [ "@int(formatDateTime(utcNow(), 'mm'))", 50 ] }
+                ]
+              }
+            ]
+          },
+          {
+            "or": [
+              { "less": [ "@int(formatDateTime(utcNow(), 'HH'))", 18 ] },
+              {
+                "and": [
+                  { "equals": [ "@int(formatDateTime(utcNow(), 'HH'))", 18 ] },
+                  { "less":   [ "@int(formatDateTime(utcNow(), 'mm'))", 30 ] }
+                ]
+              }
+            ]
+          },
+          { "greaterOrEquals": [ "@dayOfWeek(utcNow())", 1 ] },
+          { "lessOrEquals":    [ "@dayOfWeek(utcNow())", 5 ] }
+        ]
+      },
+      "actions": {
+        "Collect_data": {
+          "type": "Http",
+          "inputs": {
+            "method": "POST",
+            "uri": "@parameters('appUrl')",
+            "headers": {
+              "Authorization": "@concat('Bearer ', parameters('cronSecret'))",
+              "Content-Type": "application/json"
+            }
+          }
+        }
+      },
+      "else": { "actions": {} }
+    }
+  }
+}

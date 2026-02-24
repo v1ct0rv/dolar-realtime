@@ -218,11 +218,166 @@ After backfilling TRM data:
 
 ---
 
+## 📈 Backfill Dólar Intraday Data
+
+### Overview
+
+The `backfill-dolar.ts` script fetches historical intraday price and volume data from the ICAP chart API and inserts it into the `dolarData` MongoDB collection.
+
+**Data Source:** ICAP `graficoMoneda` endpoint — the same source used by the live cron job.
+
+### Features
+
+- ✅ Fetches full intraday price series for any business day range
+- ✅ Derives accumulated fields (openPrice, minPrice, maxPrice, avgPrice, volume, transactions)
+- ✅ Converts COT time labels (UTC-5) to UTC timestamps
+- ✅ Converts ICAP "Miles USD" amounts to USD (× 1000)
+- ✅ Deduplicates by `{ date, time }` — safe to re-run
+- ✅ 400 ms delay between days to avoid hammering ICAP
+- ✅ Progress output per day with inserted / skipped counts
+
+### Usage
+
+#### Option 1: Using npm script
+
+```bash
+# Single day
+npm run backfill-dolar 2025-06-01
+
+# Date range
+npm run backfill-dolar 2025-01-01 2025-03-31
+```
+
+#### Option 2: Direct execution
+
+```bash
+# Single day
+tsx scripts/backfill-dolar.ts 2025-06-01
+
+# Date range
+tsx scripts/backfill-dolar.ts 2025-01-01 2025-03-31
+```
+
+#### Option 3: With custom environment
+
+```bash
+MONGODB_URI=mongodb://localhost:27017 \
+MONGODB_DB_NAME=dolar-realtime \
+ICAP_API_BASE_URL=https://proxy.set-icap.com/seticap/api \
+ICAP_API_TOKEN=your-token \
+node scripts/backfill-dolar.js 2025-01-01 2025-06-30
+```
+
+### Prerequisites
+
+1. **MongoDB running**: Same as `backfill-trm.js`
+   ```bash
+   docker run -d --name mongodb -p 27017:27017 -v mongodb_data:/data/db mongo:7.0
+   ```
+
+2. **Environment variables**:
+   - `MONGODB_URI` — Default: `mongodb://localhost:27017`
+   - `MONGODB_DB_NAME` — Default: `dolar-realtime`
+   - `ICAP_API_BASE_URL` — Default: `https://proxy.set-icap.com/seticap/api`
+   - `ICAP_API_TOKEN` — Required for authenticated ICAP access
+
+### Expected Output
+
+```
+  Dólar Realtime — Backfill dolarData
+  ─────────────────────────────────────────
+  Range  : 2025-01-01 → 2025-01-31
+  Days   : 23 business day(s)
+  Source : https://proxy.set-icap.com/seticap/api
+  ─────────────────────────────────────────
+
+  2025-01-01  no data (holiday or market closed)
+  2025-01-02  ✓ inserted 47
+  2025-01-03  ✓ inserted 52, skipped 3
+  ...
+  2025-01-31  skipped (all 49 already exist)
+
+  ─────────────────────────────────────────
+  Inserted : 1082
+  Skipped  : 94
+  Failed   : 0
+  ─────────────────────────────────────────
+```
+
+### Data Structure
+
+Each inserted document matches the shape stored by the live cron job:
+
+```javascript
+{
+  timestamp:    ISODate("2025-01-02T14:05:00Z"), // Reconstructed UTC Date (COT + 5h)
+  date:         "2025-01-02",                    // Colombia date — day grouping key
+  time:         "14:05:00",                      // UTC time string — dedup key
+  price:        4350.25,                         // Closing price of this transaction
+  amount:       125000,                          // Amount in USD (miles USD × 1000)
+  openPrice:    4340.00,                         // Opening price of the day
+  minPrice:     4340.00,                         // Running minimum up to this point
+  maxPrice:     4355.75,                         // Running maximum up to this point
+  avgPrice:     4347.80,                         // Running average up to this point
+  volume:       5820000,                         // Running volume in USD
+  transactions: 12,                              // Count of transactions (1-indexed)
+  metadata:     { source: "ICAP", marketId: 71, delay: 15 }
+}
+```
+
+### Notes on Time Conversion
+
+ICAP labels are in **COT (Colombia Time = UTC-5)**. The script converts them to UTC by adding 5 hours. For example, a label `09:05:00` COT on `2025-01-02` becomes `2025-01-02T14:05:00Z`. This matches the UTC timestamps stored by the live cron job.
+
+### Re-running / Partial Fills
+
+The script is safe to re-run:
+
+- Already-inserted records (matched by `time`) are skipped per day
+- To reset a specific day's data:
+  ```bash
+  mongosh
+  use dolar-realtime
+  db.dolarData.deleteMany({ date: "2025-01-02" })
+  exit
+  node scripts/backfill-dolar.js 2025-01-02
+  ```
+
+### Troubleshooting
+
+#### Error: ICAP returns no data for a date
+Markets are closed on Colombian public holidays. The script logs `no data (holiday or market closed)` and continues.
+
+#### Error: ICAP chart data arrays have mismatched lengths
+The ICAP JSON contained unexpected structure. Check the `ICAP_API_BASE_URL` and token.
+
+#### Error: Cannot connect to MongoDB
+Start MongoDB as shown in Prerequisites.
+
+### Verification
+
+```bash
+mongosh
+use dolar-realtime
+
+// Count records for a specific day
+db.dolarData.countDocuments({ date: "2025-01-02" })
+
+// View first few records of a day
+db.dolarData.find({ date: "2025-01-02" }).sort({ time: 1 }).limit(5)
+
+// Total records across all days
+db.dolarData.countDocuments()
+
+exit
+```
+
+---
+
 ## 🚀 Future Scripts
 
 Additional scripts to be added:
 
-- `backfill-dolar-data.js` - Import historical intraday price/volume data
 - `generate-sample-data.js` - Generate synthetic data for testing
 - `export-data.js` - Export data to CSV/JSON
 - `clean-old-data.js` - Remove data older than X days
