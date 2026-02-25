@@ -22,9 +22,9 @@ const darkChart = {
   gold: '#d4922a',
   trm: '#3a6fef',
   grid: 'rgba(20,31,51,0.9)',
-  tick: '#3d5269',
-  border: '#141f33',
-  tooltipBg: 'rgba(9,14,26,0.97)',
+  tick: '#7a9ab8',
+  border: '#1e2d47',
+  tooltipBg: 'rgba(20,29,48,0.97)',
   positive: '#22c55e',
   negative: '#ef4444',
 };
@@ -329,7 +329,7 @@ export default function HistoricalDashboard() {
                   fill="url(#histGradient)"
                   name="Cierre"
                   dot={false}
-                  activeDot={{ stroke: ch.gold, fill: theme === 'dark' ? '#090e1a' : '#fdf8ef', strokeWidth: 2, r: 5 }}
+                  activeDot={{ stroke: ch.gold, fill: theme === 'dark' ? '#141d30' : '#fdf8ef', strokeWidth: 2, r: 5 }}
                 />
                 <Line
                   type="monotone"

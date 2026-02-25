@@ -24,10 +24,10 @@ const darkChart = {
   deviation: '#3a6fef',
   devLine: '#22c55e',
   grid: 'rgba(20,31,51,0.9)',
-  refLine: '#3d5269',
-  tick: '#3d5269',
-  border: '#141f33',
-  tooltipBg: 'rgba(9,14,26,0.97)',
+  refLine: '#7a9ab8',
+  tick: '#7a9ab8',
+  border: '#1e2d47',
+  tooltipBg: 'rgba(20,29,48,0.97)',
 };
 const lightChart = {
   market: '#1842c0',

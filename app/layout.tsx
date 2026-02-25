@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Fraunces, DM_Mono, DM_Sans } from 'next/font/google';
 import { ThemeProvider } from './components/ThemeProvider';
 import Nav from './components/Nav';
@@ -30,8 +30,11 @@ export const metadata: Metadata = {
   description:
     'Información del Dólar Interbancario en tiempo real desde SET-ICAP. Análisis TRM, históricos y reportes.',
   keywords: 'dolar, trm, colombia, tipo de cambio, set-icap',
+};
+
+export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: dark)',  color: '#080d1a' },
+    { media: '(prefers-color-scheme: dark)',  color: '#0c1220' },
     { media: '(prefers-color-scheme: light)', color: '#f4ede0' },
   ],
 };

@@ -3,22 +3,22 @@
 /* ── Theme: Dark (default) ───────────────────────────────────────────────── */
 :root,
 [data-theme="dark"] {
-  --clr-bg: #050810;
-  --clr-bg-glow: radial-gradient(ellipse at 15% 40%, rgba(212, 146, 42, 0.05) 0%, #050810 55%);
-  --clr-card: #090e1a;
-  --clr-card-rgb: 9, 14, 26;
-  --clr-border: #141f33;
+  --clr-bg: #0c1220;
+  --clr-bg-glow: radial-gradient(ellipse at 15% 40%, rgba(212, 146, 42, 0.07) 0%, #0c1220 55%);
+  --clr-card: #141d30;
+  --clr-card-rgb: 20, 29, 48;
+  --clr-border: #1e2d47;
   --clr-gold: #d4922a;
   --clr-blue: #3a6fef;
   --clr-text: #c8d8e8;
-  --clr-muted: #3d5269;
+  --clr-muted: #7a9ab8;
   --clr-positive: #22c55e;
   --clr-negative: #ef4444;
   --clr-divider: linear-gradient(90deg, #d4922a 0%, rgba(212, 146, 42, 0.25) 35%, transparent 65%);
-  --clr-nav-bg: rgba(9, 14, 26, 0.92);
+  --clr-nav-bg: rgba(20, 29, 48, 0.92);
 
   /* Legacy aliases (Tailwind utilities) */
-  --background: #050810;
+  --background: #0c1220;
   --foreground: #c8d8e8;
 }
 
