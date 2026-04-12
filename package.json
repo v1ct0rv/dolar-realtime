@@ -13,7 +13,7 @@
     "remove-duplicates-dolarData": "node scripts/remove-duplicates.js dolarData"
   },
   "dependencies": {
-    "axios": "^1.13.5",
+    "axios": "^1.15.0",
     "date-fns": "^4.1.0",
     "mongodb": "^7.1.0",
     "next": "^16.1.6",
