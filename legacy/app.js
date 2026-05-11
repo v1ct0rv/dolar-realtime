@@ -92,5 +92,4 @@ worker.updateAllStats();
 var s = schedule.scheduleJob('*/20 * * * * *', worker.updateStats);
 var a = schedule.scheduleJob('*/20 * * * * *', worker.updateAllStats);
 
-
 module.exports = app;

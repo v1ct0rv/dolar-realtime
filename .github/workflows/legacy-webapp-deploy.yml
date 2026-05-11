@@ -17,7 +17,12 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
+          node-version: '18.x'
+
+      - name: Install dependencies
+        run: |
+          cd legacy
+          npm install
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
