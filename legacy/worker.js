@@ -5,8 +5,11 @@ const axios = require('axios');
 
 
 const headers = {
-  Authorization:
-    "U2FsdGVkX19DSC/UgOTmKKFT71EmflbBX3tiljxmNpmMcLRZSwNlQCKxUXoN3QpJQ/f7lOA8X41400fnR5G7wA==",
+  "Content-Type": "application/json",
+  Accept: "application/json, text/plain, */*",
+  Origin: "https://dolar.set-icap.com",
+  Referer: "https://dolar.set-icap.com/",
+  "User-Agent": "Mozilla/5.0 (compatible; dolar-realtime/2.0)",
 };
 
 var worker = {
@@ -75,24 +78,24 @@ var worker = {
 
     try {
       var url =
-        "https://proxy.icap.com.co/seticap/api/estadisticas/estadisticasPrecioMercado/";
+        "https://proxy.set-icap.com/seticap/api/estadisticas/estadisticasPrecioMercado/";
       const [
         estadisticasPrecioMercado,
         estadisticasPromedioCierre,
         estadisticasMontoMercado,
       ] = await Promise.all([
         axios.post(
-          "https://proxy.icap.com.co/seticap/api/estadisticas/estadisticasPrecioMercado/",
+          "https://proxy.set-icap.com/seticap/api/estadisticas/estadisticasPrecioMercado/",
           { fecha: dateformatted, mercado: 71, delay: 15 },
           { headers: headers }
         ),
         axios.post(
-          "https://proxy.icap.com.co/seticap/api/estadisticas/estadisticasPromedioCierre/",
+          "https://proxy.set-icap.com/seticap/api/estadisticas/estadisticasPromedioCierre/",
           { fecha: dateformatted, mercado: 71, delay: 15 },
           { headers: headers }
         ),
         axios.post(
-          "https://proxy.icap.com.co/seticap/api/estadisticas/estadisticasMontoMercado/",
+          "https://proxy.set-icap.com/seticap/api/estadisticas/estadisticasMontoMercado/",
           { fecha: dateformatted, mercado: 71, delay: 15 },
           { headers: headers }
         ),
@@ -157,73 +160,49 @@ var worker = {
     console.timeEnd(timerTitle);
   },
 
-  updateAllStats: function () {
+  updateAllStats: async function () {
     var timerTitle = "Updating All Stats";
     console.time(timerTitle);
     let currentDate = new Date();
     let dateformatted = currentDate.toISOString().split("T")[0];
-    var url = "https://proxy.icap.com.co/seticap/api/graficos/graficoMoneda/";
-    request.post(
-      {
-        url: url,
-        headers: headers,
-        form: { fecha: dateformatted, moneda: 1, delay: "15" },
-      },
-      function (error, response, html) {
-        if (!error) {
-          try {
-            var data = {
-              monto: [],
-              precio: [],
-            };
+    var url = "https://proxy.set-icap.com/seticap/api/graficos/graficoMoneda/";
+    try {
+      const response = await axios.post(
+        url,
+        { fecha: dateformatted, moneda: 1, delay: "15" },
+        { headers }
+      );
 
-            var json = JSON.parse(html);
+      var data = { monto: [], precio: [] };
+      var json = response.data;
 
-            // Correct the json using the logic on https://dolar.set-icap.com/ scripts (https://dolar.set-icap.com/static/js/main.a0a26080.chunk.js)
-            var correctJson = json.result[0].datos_grafico_moneda_mercado
-              .replace(/'/g, '"')
-              .replace(/\d{2}:\d{2}(:\d{2})*/gi, function (e) {
-                return '"' + e + '"';
-              })
-              .replace(/data:/g, '"data":')
-              .replace(/label:/g, '"label":')
-              .replace(/type:/g, '"type":')
-              .replace(/labels:/g, '"labels":')
-              .replace(/datasets:/g, '"datasets":');
-            var remoteData = JSON.parse("{" + correctJson + "}").data;
-            // console.log(remoteData);
+      var correctJson = json.result[0].datos_grafico_moneda_mercado
+        .replace(/'/g, '"')
+        .replace(/\d{2}:\d{2}(:\d{2})*/gi, function (e) {
+          return '"' + e + '"';
+        })
+        .replace(/data:/g, '"data":')
+        .replace(/label:/g, '"label":')
+        .replace(/type:/g, '"type":')
+        .replace(/labels:/g, '"labels":')
+        .replace(/datasets:/g, '"datasets":');
+      var remoteData = JSON.parse("{" + correctJson + "}").data;
 
-            // data.precio = remoteData.datasets[0].data;
-            // data.monto = remoteData.datasets[1].data;
+      data.precio = remoteData.datasets[0].data.map((precio, index) => [
+        getDateFromHours(remoteData.labels[index]).getTime(),
+        precio,
+      ]);
+      data.monto = remoteData.datasets[1].data.map((monto, index) => [
+        getDateFromHours(remoteData.labels[index]).getTime(),
+        monto,
+      ]);
 
-            data.precio = remoteData.datasets[0].data.map((precio, index) => [
-              getDateFromHours(remoteData.labels[index]).getTime(),
-              precio,
-            ]);
-            data.monto = remoteData.datasets[1].data.map((monto, index) => [
-              getDateFromHours(remoteData.labels[index]).getTime(),
-              monto,
-            ]);
-
-            // json.forEach(function (element, index, array) {
-            //   element= JSON.parse(element)
-            //   data.precio.push([element.t, parseFloat(element.p)]);
-            //   data.monto.push([element.t, element.m]);
-            // });
-            //console.log(json);
-            worker.data.allStats = data;
-          } catch (error) {
-            console.error(
-              "Error on request: " + url + ", error trying to parse: " + html
-            );
-            console.error(error);
-          }
-        } else {
-          console.error("Error on request: " + url + "Error: " + error);
-        }
-        console.timeEnd(timerTitle);
-      }
-    );
+      worker.data.allStats = data;
+    } catch (error) {
+      console.error("Error on request: " + url);
+      console.error(error);
+    }
+    console.timeEnd(timerTitle);
   },
 };
 

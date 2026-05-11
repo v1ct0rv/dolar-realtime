@@ -1,0 +1,32 @@
+name: Build and deploy legacy Node.js app to Azure Web App - dolar-webapp
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'legacy/**'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js version
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+
+      - name: Install dependencies
+        working-directory: legacy
+        run: npm install
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'dolar-webapp'
+          slot-name: 'production'
+          publish-profile: ${{ secrets.AzureAppService_PublishProfile_9a612629cc4842abaa3f2a5664ba6bb3 }}
+          package: ./legacy

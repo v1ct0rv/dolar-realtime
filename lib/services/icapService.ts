@@ -1,11 +1,16 @@
 import axios from 'axios';
 
-const ICAP_BASE_URL = process.env.ICAP_API_BASE_URL || 'https://proxy.icap.com.co/seticap/api';
+const ICAP_BASE_URL =
+  process.env.ICAP_API_BASE_URL || "https://proxy.set-icap.com/seticap/api";
 const ICAP_TOKEN = process.env.ICAP_API_TOKEN || '';
 
-const headers = {
-  Authorization: ICAP_TOKEN,
-  'Content-Type': 'application/json',
+const headers: Record<string, string> = {
+  "Content-Type": "application/json",
+  Accept: "application/json, text/plain, */*",
+  Origin: "https://dolar.set-icap.com",
+  Referer: "https://dolar.set-icap.com/",
+  "User-Agent": "Mozilla/5.0 (compatible; dolar-realtime/2.0)",
+  ...(ICAP_TOKEN ? { Authorization: ICAP_TOKEN } : {}),
 };
 
 export interface ICAPPriceMarketData {
