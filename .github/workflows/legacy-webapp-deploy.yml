@@ -29,4 +29,4 @@ jobs:
           app-name: 'dolar-webapp'
           slot-name: 'production'
           publish-profile: ${{ secrets.AzureAppService_PublishProfile_9a612629cc4842abaa3f2a5664ba6bb3 }}
-          package: ./legacy
+          package: .
