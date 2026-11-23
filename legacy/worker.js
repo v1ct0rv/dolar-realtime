@@ -1,5 +1,3 @@
-var request = require('request');
-var _ = require('lodash');
 const axios = require('axios');
 
 
@@ -26,57 +24,6 @@ var worker = {
     oilStats: {},
     stats: {},
     allStats: {},
-  },
-
-  updateBrentOil: function () {
-    var timerTitle = "Updating BrentOil";
-    console.time(timerTitle);
-
-    // TODO use this api instead: https://api.investing.com/api/financialdata/8833/historical/chart/?interval=PT15M&pointscount=120
-    var options = {
-      url: "http://es.investing.com/common/modules/js_instrument_chart/api/data.php?symbol=Petr%25C3%25B3leo%2BBrent&pair_id=8833&pair_id_for_news=8833&chart_type=area&pair_interval=300&candle_count=120&events=yes&volume_series=yes",
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)",
-        Referer: "http://es.investing.com/commodities/brent-oil",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-    };
-
-    request(options, function (error, response, html) {
-      if (!error) {
-        try {
-          var data = JSON.parse(html);
-
-          // Sort the data to avoid http://www.highcharts.com/errors/15
-          if (data.candles) {
-            data.candles = _.sortBy(data.candles, function (arr) {
-              return arr[0];
-            });
-          }
-
-          if (data.events && data.events.news) {
-            data.events.news = _.sortBy(data.events.news, function (o) {
-              return o.x;
-            });
-          }
-
-          worker.data.oilStats = data;
-        } catch (error) {
-          console.error(
-            "Error on request: " +
-              options.url +
-              ", error trying to parse: " +
-              html
-          );
-          console.error(error);
-        }
-      } else {
-        console.error("Error on request: " + options.url + "Error: " + error);
-      }
-    });
-
-    console.timeEnd(timerTitle);
   },
 
   updateStats: async function () {
