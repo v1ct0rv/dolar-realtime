@@ -163,3 +163,18 @@ export async function getBrentOil(): Promise<BrentOilData> {
 
   return { ...data, moves: attachHeadlines(detectMoves(data.points), headlines) };
 }
+
+const CACHE_MS = 60_000;
+let cached: { at: number; result: Promise<BrentOilData> } | undefined;
+
+/**
+ * getBrentOil, asked at most once a minute however many dashboards are open. The
+ * promise is what is kept: callers arriving while a request is in flight share
+ * it, and a failure is remembered for the minute too, so a Yahoo that is
+ * refusing us is not asked again by every poll.
+ */
+// shortcut: per-instance memory cache, move to a shared cache if the app ever runs on several instances
+export function getCachedBrentOil(now: number = Date.now()): Promise<BrentOilData> {
+  if (!cached || now - cached.at > CACHE_MS) cached = { at: now, result: getBrentOil() };
+  return cached.result;
+}

@@ -7,6 +7,7 @@ import {
   attachHeadlines,
   detectMoves,
   getBrentOil,
+  getCachedBrentOil,
   parseChart,
   parseNews,
 } from './oilService';
@@ -170,4 +171,34 @@ test('getBrentOil rejects when the price fails', async () => {
   });
 
   await assert.rejects(getBrentOil());
+});
+
+// The cache lives for the whole test run, so each test below has its own minute.
+
+test('getCachedBrentOil asks the sources once for callers in the same minute', async () => {
+  const get = stubNetwork((url) => (url === CHART_URL ? fixture.chart : fixture.news));
+  const now = 1_000_000;
+
+  // The second caller arrives while the first request is still in flight.
+  const [first, second] = await Promise.all([getCachedBrentOil(now), getCachedBrentOil(now + 1_000)]);
+  const third = await getCachedBrentOil(now + 59_000);
+
+  assert.equal(get.mock.callCount(), 2); // one price request and one news request
+  assert.equal(first, second);
+  assert.equal(first, third);
+});
+
+test('getCachedBrentOil remembers a failure for the minute, then asks again', async () => {
+  const failing = stubNetwork(() => {
+    throw new Error('429');
+  });
+  const now = 2_000_000;
+
+  await assert.rejects(getCachedBrentOil(now));
+  await assert.rejects(getCachedBrentOil(now + 30_000));
+  assert.equal(failing.mock.callCount(), 2); // the first caller's two requests, none for the second
+
+  mock.restoreAll();
+  stubNetwork((url) => (url === CHART_URL ? fixture.chart : fixture.news));
+  assert.equal((await getCachedBrentOil(now + 61_000)).price, 90);
 });

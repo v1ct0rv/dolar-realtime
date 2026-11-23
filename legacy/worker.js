@@ -213,7 +213,8 @@ var worker = {
         events: { news: moves.map(oilFlag) },
       };
     } catch (error) {
-      // oilStats keeps its last good value.
+      // Emptied, not kept: the page hides the section rather than show an old price as current.
+      worker.data.oilStats = {};
       console.error("Error on request: " + OIL_CHART_URL);
       console.error(error);
     }

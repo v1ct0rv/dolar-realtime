@@ -12,6 +12,7 @@ import {
   YAxis,
 } from 'recharts';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import type { BrentOilData } from '@/types';
 
 /** The part of the dashboard's chart colour map this chart uses. */
@@ -154,6 +155,10 @@ export default function BrentOilChart({ ch }: { ch: ChartColors }) {
           >
             finance.yahoo.com · BZ=F
           </a>
+          {/* At a weekend this is Friday's session: say which day the chart is. */}
+          <span style={{ ...mono, color: 'var(--clr-muted)', fontSize: 11, letterSpacing: '0.04em' }}>
+            {' · '}sesión del {format(new Date(data[data.length - 1].timestamp), "d 'de' MMM", { locale: es })}
+          </span>
         </div>
 
         <div className="sm:text-right">
@@ -237,7 +242,7 @@ export default function BrentOilChart({ ch }: { ch: ChartColors }) {
         <>
           <ol
             role="list"
-            aria-label="Movimientos fuertes del Brent hoy"
+            aria-label="Movimientos fuertes del Brent en la sesión"
             style={{ listStyle: 'none', padding: 0, margin: '18px 0 0', display: 'grid', gap: 10 }}
           >
             {oil.moves.map((move, i) => (

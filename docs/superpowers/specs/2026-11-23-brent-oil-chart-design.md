@@ -126,9 +126,12 @@ compared on the unrounded change, and a tie goes to the earlier point.
   be tested without the network.
 - `app/api/oil/brent/route.ts` — `GET` answers `{ success: true, data }`, or
   `502` with `{ success: false, error }` when the price cannot be read.
-- The route keeps the last result in memory for 60 seconds, so many open
-  dashboards cost Yahoo one request a minute per server instance. Static Web
-  Apps has no CDN in front of the API to do this through `Cache-Control`.
+- The service keeps the last answer in memory for 60 seconds, so many open
+  dashboards cost Yahoo one request a minute per server instance. Callers
+  arriving while a request is in flight share it, and a failure is kept for
+  the minute too: a Yahoo that is refusing us is not asked again by every
+  poll. Static Web Apps has no CDN in front of the API to do this through
+  `Cache-Control`.
 - `types/index.ts` gains the three types.
 - `app/components/dashboard/BrentOilChart.tsx` — a client component with its
   own fetch and a 60-second refresh. A card titled "Petróleo Brent" with the
@@ -176,8 +179,8 @@ compared on the unrounded change, and a tie goes to the earlier point.
 **When a source fails**
 
 - Price unreadable: the new app's route answers 502 and the section is hidden.
-  The legacy worker logs the error and keeps its last good data, as it does for
-  ICAP.
+  The legacy worker logs the error and empties its data, so the page hides the
+  section too. Neither app goes on showing an old price as the current one.
 - News unreadable: the chart and price still show, and the moves have no
   headlines.
 - No points yet: empty chart data, section hidden.
@@ -233,8 +236,11 @@ compared on the unrounded change, and a tie goes to the earlier point.
 - 0.75 % in 30 minutes, at most 5 markers, at least 30 minutes apart, headline
   within 60 minutes.
 - The new app refreshes oil every 60 seconds, independent of the dollar's 10.
-- The legacy worker keeps its last good data on failure instead of hiding the
-  section.
+- On a failure both apps hide the section until the next good answer, at most
+  a minute later. The first draft kept the legacy app's last good data; the
+  branch review pointed out it had no age limit.
+- The new app's card names the session's day, since at a weekend it is
+  Friday's.
 - A refusal from Yahoo on the preview stops the merge.
 - The legacy page's percentage is corrected rather than copied into the new
   app.

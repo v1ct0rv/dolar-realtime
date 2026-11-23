@@ -483,6 +483,21 @@ git commit -m "feat(legacy): bring back the Brent oil chart"
 
 ---
 
+### Changed after the branch review
+
+The steps above are as they were executed. A review of the whole branch then changed four things; the spec has
+them, and the code is the reference:
+
+- **Cache (Task 1, Step 7).** It moved from the route into the service as `getCachedBrentOil(now?)`, which keeps the
+  promise: callers in the same minute share one request, and a failure is kept for the minute too. Tested in
+  `oilService.test.ts`.
+- **Legacy failure (Review Focus 5 and Task 3).** `updateBrentOil` empties `oilStats` when Yahoo fails instead of
+  keeping the last good data, which had no age limit. The test is now
+  `updateBrentOil empties oilStats when Yahoo fails`.
+- **Legacy page.** A refresh shows the chart again after an answer without prices had hidden it, and the `rel`
+  allow-list line is guarded so it can never stop the dollar chart.
+- **New app card.** It names the session's day (`sesión del 23 de nov`), since at a weekend it is Friday's.
+
 ### After the tasks
 
 - Open the pull request and check the Static Web Apps preview: `/api/oil/brent` answers there. This is the first call

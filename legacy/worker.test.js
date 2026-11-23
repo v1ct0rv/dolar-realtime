@@ -91,17 +91,17 @@ test('updateBrentOil fills oilStats in the shape the page reads', async () => {
   ]);
 });
 
-test('updateBrentOil keeps the last good data when Yahoo fails', async () => {
+// An old price must not stay on the page as "Actual": with {} the page hides the section.
+test('updateBrentOil empties oilStats when Yahoo fails', async () => {
   stubOil(oil.chart, oil.news);
   await worker.updateBrentOil();
-  const lastGood = structuredClone(worker.data.oilStats);
+  assert.equal(worker.data.oilStats.candles.length, 22);
   mock.restoreAll();
 
   stubOil(new Error('429'), oil.news);
   await worker.updateBrentOil();
 
-  assert.equal(lastGood.candles.length, 22);
-  assert.deepEqual(worker.data.oilStats, lastGood);
+  assert.deepEqual(worker.data.oilStats, {});
 });
 
 test('updateBrentOil shows moves without headlines when the news fails', async () => {

@@ -51,7 +51,7 @@ Required in `.env.local`:
 - `app/api/cron/collect-data/route.ts` — data ingestion (deduplicates by comparing critical fields before insert)
 - `app/api/reports/trm-analysis/route.ts` — date-range TRM report (cached 300s/600s)
 - `lib/services/oilService.ts` — Brent oil: today's 5-minute prices from Yahoo Finance (`BZ=F`, unofficial, needs a browser-like `User-Agent`) and headlines from Google News RSS; marks up to 5 sharp moves (0.75 % in 30 min) and gives each the nearest oil headline. Nothing is stored. `legacy/worker.js` carries a copy of the same rule; the shared fixture's calibration day keeps the two in step
-- `app/api/oil/brent/route.ts` — serves it, kept in memory for 60s per instance
+- `app/api/oil/brent/route.ts` — serves it through `getCachedBrentOil`, which keeps the answer (a failure too) in memory for 60s per instance
 
 **Client components** (`'use client'`): `RealTimeDashboard` (auto-refreshes every 10s) with `BrentOilChart` inside it (its own 60s refresh; renders nothing when oil is unavailable), `TRMAnalysisDashboard`, `TRMHistoryDashboard`, `HistoricalDashboard`.
 

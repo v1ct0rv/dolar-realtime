@@ -71,6 +71,10 @@ function updateData(isUpdate) {
         // never drawn (no data on the first load) is created instead.
         var brentChart = $('#container-brent').highcharts();
         if (isUpdate && brentChart && hasCandles(data)) {
+            // An answer without prices hides the chart; bring it back and let it
+            // take its size again, or it stays hidden until the page is reloaded.
+            $('#container-brent').show();
+            brentChart.reflow();
             brentChart.series[0].setData(data.candles);
             brentChart.series[1].setData(data.events.news);
         } else {
@@ -335,7 +339,11 @@ $(function() {
 
     // Highcharts strips attributes it does not know from tooltip HTML. The oil
     // headlines open in a new tab and keep their rel="noopener noreferrer".
-    Highcharts.AST.allowedAttributes.push('rel');
+    // Guarded: the page takes whatever Highstock the CDN serves, and a nicety for
+    // the oil links must never be what stops the dollar chart below.
+    if (Highcharts.AST && Highcharts.AST.allowedAttributes) {
+        Highcharts.AST.allowedAttributes.push('rel');
+    }
 
     updateData(false);
 
