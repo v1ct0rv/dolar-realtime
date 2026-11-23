@@ -38,13 +38,6 @@ function updateData(isUpdate) {
 
     loadBrentOil(function(data, textStatus, jqXHR) {
 
-        for (var m in data.events) {
-            for (var g in data.events[m]) {
-                evento = data.events[m][g];
-                evento.text = evento.text.replace("VAR_TIMESTAMP", '').replace("href=\"", 'href=\"http://es.investing.com')
-            };
-        }
-
         if(data.attr) {
             $("#oilData").show()
             // Set Data
@@ -61,8 +54,8 @@ function updateData(isUpdate) {
                 $("#priceOilChange").attr('class', 'bg-danger');
             }
 
-            // Show variation
-            var variation = parseFloat((1-(data.attr.last_close_value/data.attr.last_value))*100).toFixed(2);
+            // Show variation: the change against the previous close
+            var variation = parseFloat((data.attr.last_value/data.attr.last_close_value-1)*100).toFixed(2);
             if (variation > 0) {
                 $("#priceOilVariation").text('   (+' + variation + '%)');
                 $("#priceOilVariation").attr('class', 'bg-success');
@@ -74,9 +67,12 @@ function updateData(isUpdate) {
             $("#oilData").hide()
         }
 
-        // Set Chart
-        if (isUpdate && data.candles) {
-            $('#container-brent').highcharts().series[0].setData(data.candles);
+        // Set Chart: a refresh updates the line and its flags; a chart that was
+        // never drawn (no data on the first load) is created instead.
+        var brentChart = $('#container-brent').highcharts();
+        if (isUpdate && brentChart && hasCandles(data)) {
+            brentChart.series[0].setData(data.candles);
+            brentChart.series[1].setData(data.events.news);
         } else {
             loadBrentChart(data);
         }
@@ -209,8 +205,13 @@ function loadDolarChart(data) {
     });
 }
 
+// True once the oil data has at least one price point.
+function hasCandles(data) {
+    return !!(data.candles && data.candles.length);
+}
+
 function loadBrentChart(data) {
-    if(!data.candles){
+    if(!hasCandles(data)){
         $('#container-brent').hide()
     } else {
         $('#container-brent').show()
@@ -218,11 +219,16 @@ function loadBrentChart(data) {
             chart: {
                 zoomType: 'x'
             },
+            // Oil timestamps are real instants (the dollar chart's are wall-clock
+            // times), so the zone has to be named for the axis to read in Colombian time.
+            time: {
+                timezone: 'America/Bogota'
+            },
             title: {
                 text: 'Petróleo Brent'
             },
             subtitle: {
-                text: 'Fuente: http://es.investing.com/commodities/brent-oil'
+                text: 'Fuente: Yahoo Finance (BZ=F) · Noticias: Google News'
             },
             xAxis: {
                 title: {
@@ -274,7 +280,9 @@ function loadBrentChart(data) {
                         },
                         stops: [
                             [0, Highcharts.getOptions().colors[0]],
-                            [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
+                            // Highcharts.color(), not Highcharts.Color(): the page loads the latest
+                            // Highstock, where Color is a class and calling it without `new` throws.
+                            [1, Highcharts.color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
                         ]
                     },
                     marker: {
@@ -306,15 +314,12 @@ function loadBrentChart(data) {
                 onSeries : 'dataseries',
                 shape : 'circlepin',
                 width : 16
-            }, {
-                type: "flags",
-                onSeries: "dataseries",
-                shape: "circlepin",
-                data: data.events.ec,
-                zIndex: 11
             }],
             tooltip: {
-                useHTML: true
+                useHTML: true,
+                // Let the pointer reach the tooltip, so the headline's link can be clicked.
+                stickOnContact: true,
+                style: { pointerEvents: 'auto' }
             }
         });
     }
@@ -327,6 +332,10 @@ $(function() {
             useUTC: false
         }
     });
+
+    // Highcharts strips attributes it does not know from tooltip HTML. The oil
+    // headlines open in a new tab and keep their rel="noopener noreferrer".
+    Highcharts.AST.allowedAttributes.push('rel');
 
     updateData(false);
 

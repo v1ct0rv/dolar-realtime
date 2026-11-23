@@ -80,10 +80,12 @@ app.use(function(err, req, res, next) {
 });
 
 // Run Jobs
+worker.updateBrentOil();
 worker.updateStats();
 worker.updateAllStats();
 
 // Schedule Jobs
+var o = schedule.scheduleJob('0 * * * * *', worker.updateBrentOil); // once a minute: Yahoo is not ours to hammer
 var s = schedule.scheduleJob('*/20 * * * * *', worker.updateStats);
 var a = schedule.scheduleJob('*/20 * * * * *', worker.updateAllStats);
 

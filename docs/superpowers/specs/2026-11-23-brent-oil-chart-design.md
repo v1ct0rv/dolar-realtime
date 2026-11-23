@@ -160,6 +160,17 @@ compared on the unrounded change, and a tie goes to the earlier point.
     `(1 - close / last) * 100`, the change relative to the current price; it
     becomes `(last / close - 1) * 100`, the change against the previous close,
     so both apps show the same number.
+- Found when the page was first loaded with data. The page takes the latest
+  Highstock from the CDN (13.1.1 that day), and the dormant chart code no
+  longer ran on it:
+  - `Highcharts.Color(...)` threw, because `Color` is now a class. It becomes
+    `Highcharts.color(...)`.
+  - `global.useUTC` is no longer honoured, so the axis read in UTC. The oil
+    chart names its zone, `America/Bogota`. The dollar chart is left alone:
+    its timestamps are wall-clock times built on the server.
+  - Highcharts strips `rel` from tooltip HTML. It is added to the allow list so
+    the headline links keep `rel="noopener noreferrer"`.
+  - An empty list of prices is treated like no prices: the chart is hidden.
 - `/investing/brentOil` keeps its path and JSONP behaviour.
 
 **When a source fails**
