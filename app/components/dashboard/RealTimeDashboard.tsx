@@ -15,6 +15,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useTheme } from '../ThemeProvider';
+import BrentOilChart from './BrentOilChart';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const getTodayColombiaDate = () =>
@@ -424,6 +425,9 @@ export default function RealTimeDashboard() {
             </ResponsiveContainer>
           </div>
         )}
+
+        {/* ── Brent oil ── */}
+        <BrentOilChart ch={ch} />
       </div>
     </div>
   );
