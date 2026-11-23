@@ -1,14 +1,14 @@
 import { afterEach, mock, test } from 'node:test';
 import assert from 'node:assert/strict';
 import axios from 'axios';
-import fixture from './icapService.fixture.json';
+import fixture from './icapService.fixture';
 import { fetchAllCurrentStats, fetchIntradayChartData } from './icapService';
 
-// The fixture is trimmed from a real snapshot captured on 2026-11-23.
-
 const SNAPSHOT_URL = 'https://proxy.set-icap.com/api/v1/ws/public/delay/snapshot?market=71';
+// What ICAP sends in message 1000 when nothing has traded.
 const EMPTY_CHART =
-  "data: {datasets: [{label: 'Precios de cierre',data: [],type: 'line'}, {label: 'Montos (Miles USD)',data: []}],labels: []}";
+  "data: {datasets: [{label: 'Precios de cierre',data: [],type: 'line'}, " +
+  "{label: 'Montos (Miles USD)',data: []}],labels: []}";
 
 const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
 

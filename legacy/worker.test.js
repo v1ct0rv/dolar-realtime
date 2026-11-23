@@ -2,7 +2,7 @@ const { afterEach, mock, test } = require('node:test');
 const assert = require('node:assert/strict');
 const axios = require('axios');
 // A trimmed real ICAP snapshot, shared with the new app's tests.
-const fixture = require('../lib/services/icapService.fixture.json');
+const fixture = require('../lib/services/icapService.fixture');
 const worker = require('./worker');
 
 afterEach(() => mock.restoreAll());

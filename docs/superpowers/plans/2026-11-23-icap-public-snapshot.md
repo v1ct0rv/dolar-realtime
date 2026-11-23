@@ -37,7 +37,7 @@
 - Modify: `app/api/cron/collect-data/route.ts:71`
 - Modify: `package.json` (add `test` script)
 - Create: `lib/services/icapService.test.ts`
-- Create: `lib/services/icapService.fixture.json`
+- Create: `lib/services/icapService.fixture.js`
 - Modify: `.env.local.example`, `CLAUDE.md`, `scripts/README.md`
 
 **Interfaces:**
@@ -45,7 +45,7 @@
 - Produces: `fetchIntradayChartData(date: string): Promise<ICAPIntradayPoint[]>` — unchanged signature; rejects when `date` is not today in `America/Bogota`.
 - Removed: `fetchPriceMarketStats`, `fetchAverageCloseStats`, `fetchVolumeMarketStats` (no callers outside the service).
 
-- [ ] **Step 1: Create the fixture `lib/services/icapService.fixture.json`**
+- [ ] **Step 1: Create the fixture `lib/services/icapService.fixture.js`**
 
 A trimmed copy of the real snapshot captured on 2026-11-23: top-level `{ "market": "71", "status": "ok", "stale": false, "messages": [...] }` with these messages, in this order:
 
