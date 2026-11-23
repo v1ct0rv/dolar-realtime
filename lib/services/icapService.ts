@@ -1,17 +1,32 @@
 import axios from 'axios';
+import { COLOMBIA_TIMEZONE } from '../utils/timezone';
 
-const ICAP_BASE_URL =
-  process.env.ICAP_API_BASE_URL || "https://proxy.set-icap.com/seticap/api";
-const ICAP_TOKEN = process.env.ICAP_API_TOKEN || '';
+// ICAP's public snapshot: one unauthenticated response carrying what used to be
+// four endpoints, as messages keyed by id. It always describes the current day.
+const ICAP_SNAPSHOT_URL =
+  'https://proxy.set-icap.com/api/v1/ws/public/delay/snapshot?market=71';
 
-const headers: Record<string, string> = {
-  "Content-Type": "application/json",
-  Accept: "application/json, text/plain, */*",
-  Origin: "https://dolar.set-icap.com",
-  Referer: "https://dolar.set-icap.com/",
-  "User-Agent": "Mozilla/5.0 (compatible; dolar-realtime/2.0)",
-  ...(ICAP_TOKEN ? { Authorization: ICAP_TOKEN } : {}),
-};
+const MESSAGE = { chart: 1000, volume: 1005, price: 1006, averageClose: 1007 } as const;
+
+interface ICAPSnapshotMessage {
+  id: number;
+  data?: unknown;
+  result?: unknown;
+}
+
+/**
+ * Fetch the snapshot and return a lookup of its messages by id.
+ */
+async function fetchSnapshot(): Promise<(id: number) => ICAPSnapshotMessage> {
+  const response = await axios.get(ICAP_SNAPSHOT_URL);
+  const messages: ICAPSnapshotMessage[] = response.data?.messages ?? [];
+
+  return (id) => {
+    const message = messages.find((m) => m.id === id);
+    if (!message) throw new Error(`ICAP snapshot has no message ${id}`);
+    return message;
+  };
+}
 
 export interface ICAPPriceMarketData {
   trm: string | number;
@@ -67,88 +82,27 @@ export interface ICAPIntradayPoint {
 }
 
 /**
- * Fetch price market statistics (TRM, high, low, open)
- */
-export async function fetchPriceMarketStats(date: string): Promise<ICAPPriceMarketData> {
-  try {
-    const response = await axios.post(
-      `${ICAP_BASE_URL}/estadisticas/estadisticasPrecioMercado/`,
-      {
-        fecha: date,
-        mercado: 71,
-        delay: 15,
-      },
-      { headers }
-    );
-
-    return response.data.data;
-  } catch (error) {
-    console.error('Error fetching price market stats:', error);
-    throw new Error('Failed to fetch price market statistics from ICAP');
-  }
-}
-
-/**
- * Fetch average and closing price statistics
- */
-export async function fetchAverageCloseStats(date: string): Promise<ICAPAverageCloseData> {
-  try {
-    const response = await axios.post(
-      `${ICAP_BASE_URL}/estadisticas/estadisticasPromedioCierre/`,
-      {
-        fecha: date,
-        mercado: 71,
-        delay: 15,
-      },
-      { headers }
-    );
-
-    return response.data.data;
-  } catch (error) {
-    console.error('Error fetching average/close stats:', error);
-    throw new Error('Failed to fetch average/close statistics from ICAP');
-  }
-}
-
-/**
- * Fetch volume market statistics
- */
-export async function fetchVolumeMarketStats(date: string): Promise<ICAPVolumeMarketData> {
-  try {
-    const response = await axios.post(
-      `${ICAP_BASE_URL}/estadisticas/estadisticasMontoMercado/`,
-      {
-        fecha: date,
-        mercado: 71,
-        delay: 15,
-      },
-      { headers }
-    );
-
-    return response.data.data;
-  } catch (error) {
-    console.error('Error fetching volume market stats:', error);
-    throw new Error('Failed to fetch volume market statistics from ICAP');
-  }
-}
-
-/**
  * Fetch and parse intraday chart data from ICAP.
  * Returns one ICAPIntradayPoint per transaction label, with all fields
  * derived and accumulated so each point can be directly mapped to DolarData.
  *
  * Amount labels from ICAP are "Montos (Miles USD)" — multiplied by 1000 here.
  * Times in cotTime are in Colombia time (COT, UTC-5).
+ *
+ * Only the current day (Colombia time) is available; any other date rejects.
  */
 export async function fetchIntradayChartData(date: string): Promise<ICAPIntradayPoint[]> {
-  try {
-    const response = await axios.post(
-      `${ICAP_BASE_URL}/graficos/graficoMoneda/`,
-      { fecha: date, moneda: 1, delay: '15' },
-      { headers }
-    );
+  // The snapshot takes no date: asking for another day would return today's ticks under the wrong date.
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: COLOMBIA_TIMEZONE });
+  if (date !== today) {
+    throw new Error(`ICAP only serves the current day (${today}); cannot fetch ${date}`);
+  }
 
-    const rawData = response.data.result[0].datos_grafico_moneda_mercado;
+  try {
+    const message = await fetchSnapshot();
+    const chart = message(MESSAGE.chart).result as { datos_grafico_moneda_mercado: string }[];
+
+    const rawData = chart[0].datos_grafico_moneda_mercado;
 
     const correctJson = rawData
       .replace(/'/g, '"')
@@ -203,15 +157,14 @@ export async function fetchIntradayChartData(date: string): Promise<ICAPIntraday
 }
 
 /**
- * Fetch all current statistics (combines all endpoints)
+ * Fetch all current statistics (price, average/close and volume messages)
  */
-export async function fetchAllCurrentStats(date: string) {
+export async function fetchAllCurrentStats() {
   try {
-    const [priceMarket, averageClose, volumeMarket] = await Promise.all([
-      fetchPriceMarketStats(date),
-      fetchAverageCloseStats(date),
-      fetchVolumeMarketStats(date),
-    ]);
+    const message = await fetchSnapshot();
+    const priceMarket = message(MESSAGE.price).data as ICAPPriceMarketData;
+    const averageClose = message(MESSAGE.averageClose).data as ICAPAverageCloseData;
+    const volumeMarket = message(MESSAGE.volume).data as ICAPVolumeMarketData;
 
     return {
       trm: parseNumeric(priceMarket.trm),
