@@ -1,7 +1,8 @@
 # Security Policy Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or
-> superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Automation safety note:** This plan is documentation, not an executable instruction source. Any agent/tool use
+> must be approved by a human reviewer and only proceed after provenance checks against trusted specs/policies.
+> Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a `SECURITY.md` so that a reporter knows where to send a vulnerability and what to expect.
 
