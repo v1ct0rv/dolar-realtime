@@ -4,13 +4,22 @@ const axios = require('axios');
 
 
 
-const headers = {
-  "Content-Type": "application/json",
-  Accept: "application/json, text/plain, */*",
-  Origin: "https://dolar.set-icap.com",
-  Referer: "https://dolar.set-icap.com/",
-  "User-Agent": "Mozilla/5.0 (compatible; dolar-realtime/2.0)",
-};
+// ICAP's public snapshot: one unauthenticated response carrying what used to be
+// four endpoints, as messages keyed by id. It always describes the current day.
+const SNAPSHOT_URL =
+  "https://proxy.set-icap.com/api/v1/ws/public/delay/snapshot?market=71";
+
+// Fetches the snapshot and returns a lookup of its messages by id.
+async function fetchSnapshot() {
+  const response = await axios.get(SNAPSHOT_URL);
+  const messages = response.data.messages || [];
+
+  return function (id) {
+    const message = messages.find((m) => m.id === id);
+    if (!message) throw new Error("ICAP snapshot has no message " + id);
+    return message;
+  };
+}
 
 var worker = {
   data: {
@@ -72,63 +81,38 @@ var worker = {
 
   updateStats: async function () {
     var timerTitle = "Updating Stats";
-    let currentDate = new Date();
-    let dateformatted = currentDate.toISOString().split("T")[0];
     console.time(timerTitle);
 
     try {
-      var url =
-        "https://proxy.set-icap.com/seticap/api/estadisticas/estadisticasPrecioMercado/";
-      const [
-        estadisticasPrecioMercado,
-        estadisticasPromedioCierre,
-        estadisticasMontoMercado,
-      ] = await Promise.all([
-        axios.post(
-          "https://proxy.set-icap.com/seticap/api/estadisticas/estadisticasPrecioMercado/",
-          { fecha: dateformatted, mercado: 71, delay: 15 },
-          { headers: headers }
-        ),
-        axios.post(
-          "https://proxy.set-icap.com/seticap/api/estadisticas/estadisticasPromedioCierre/",
-          { fecha: dateformatted, mercado: 71, delay: 15 },
-          { headers: headers }
-        ),
-        axios.post(
-          "https://proxy.set-icap.com/seticap/api/estadisticas/estadisticasMontoMercado/",
-          { fecha: dateformatted, mercado: 71, delay: 15 },
-          { headers: headers }
-        ),
-      ]);
+      const message = await fetchSnapshot();
+      const precioMercado = message(1006).data;
+      const promedioCierre = message(1007).data;
+      const montoMercado = message(1005).data;
 
       var data = {};
       // Fill Data
-      data.trm = estadisticasPrecioMercado.data.data.trm;
-      data.trmPriceChange =
-        estadisticasPrecioMercado.data.data.trmchange.toLowerCase();
-      data.maxPrice = estadisticasPrecioMercado.data.data.high;
-      data.maxPriceChange =
-        estadisticasPrecioMercado.data.data.highchange.toLowerCase();
-      data.minPrice = estadisticasPrecioMercado.data.data.low;
-      data.minPriceChange =
-        estadisticasPrecioMercado.data.data.lowchange.toLowerCase();
-      data.openPrice = estadisticasPrecioMercado.data.data.open;
-      data.openPriceChange =
-        estadisticasPrecioMercado.data.data.openchange.toLowerCase();
+      data.trm = precioMercado.trm;
+      data.trmPriceChange = precioMercado.trmchange.toLowerCase();
+      data.maxPrice = precioMercado.high;
+      data.maxPriceChange = precioMercado.highchange.toLowerCase();
+      data.minPrice = precioMercado.low;
+      data.minPriceChange = precioMercado.lowchange.toLowerCase();
+      data.openPrice = precioMercado.open;
+      data.openPriceChange = precioMercado.openchange.toLowerCase();
 
-      data.price = estadisticasPromedioCierre.data.data.close;
-      data.avgPrice = estadisticasPromedioCierre.data.data.avg;
+      data.price = promedioCierre.close;
+      data.avgPrice = promedioCierre.avg;
 
-      data.totalAmmount = estadisticasMontoMercado.data.data.sum;
-      data.latestAmmount = estadisticasMontoMercado.data.data.open;
-      data.avgAmmount = estadisticasMontoMercado.data.data.avg;
-      data.minAmmount = estadisticasMontoMercado.data.data.low;
-      data.maxAmmount = estadisticasMontoMercado.data.data.high;
-      data.transactions = estadisticasMontoMercado.data.data.count;
+      data.totalAmmount = montoMercado.sum;
+      data.latestAmmount = montoMercado.open;
+      data.avgAmmount = montoMercado.avg;
+      data.minAmmount = montoMercado.low;
+      data.maxAmmount = montoMercado.high;
+      data.transactions = montoMercado.count;
 
       worker.data.stats = data;
     } catch (error) {
-      console.error("Error on request: " + url);
+      console.error("Error on request: " + SNAPSHOT_URL);
       console.error(error);
     }
 
@@ -163,18 +147,11 @@ var worker = {
   updateAllStats: async function () {
     var timerTitle = "Updating All Stats";
     console.time(timerTitle);
-    let currentDate = new Date();
-    let dateformatted = currentDate.toISOString().split("T")[0];
-    var url = "https://proxy.set-icap.com/seticap/api/graficos/graficoMoneda/";
     try {
-      const response = await axios.post(
-        url,
-        { fecha: dateformatted, moneda: 1, delay: "15" },
-        { headers }
-      );
+      const message = await fetchSnapshot();
 
       var data = { monto: [], precio: [] };
-      var json = response.data;
+      var json = message(1000);
 
       var correctJson = json.result[0].datos_grafico_moneda_mercado
         .replace(/'/g, '"')
@@ -199,7 +176,7 @@ var worker = {
 
       worker.data.allStats = data;
     } catch (error) {
-      console.error("Error on request: " + url);
+      console.error("Error on request: " + SNAPSHOT_URL);
       console.error(error);
     }
     console.timeEnd(timerTitle);
