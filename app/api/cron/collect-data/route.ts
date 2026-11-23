@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     const dateFormatted = colombiaDate.toLocaleDateString("en-CA"); // en-CA gives YYYY-MM-DD format
 
     // Fetch current stats from ICAP
-    const stats = await fetchAllCurrentStats(dateFormatted);
+    const stats = await fetchAllCurrentStats();
 
     // Get database connection
     const db = await getDatabase();

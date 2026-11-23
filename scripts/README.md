@@ -222,13 +222,17 @@ After backfilling TRM data:
 
 ### Overview
 
-The `backfill-dolar.ts` script fetches historical intraday price and volume data from the ICAP chart API and inserts it into the `dolarData` MongoDB collection.
+The `backfill-dolar.ts` script fetches the current day's intraday price and volume data from ICAP and inserts it into the `dolarData` MongoDB collection.
 
-**Data Source:** ICAP `graficoMoneda` endpoint — the same source used by the live cron job.
+**Data Source:** ICAP public snapshot (chart message `1000`) — the same request used by the live cron job.
+
+> Since 2026-11-14 ICAP only serves **the current day** (Colombia time). Any other date fails with `ICAP only serves the current day`, so run this the same day you need to recover.
+>
+> The chart only carries transactional trades. Backfilled ticks therefore have a lower running `volume` and `transactions` than the ticks the live cron stores, which come from ICAP's totals. Prices are unaffected.
 
 ### Features
 
-- ✅ Fetches full intraday price series for any business day range
+- ✅ Fetches the full intraday price series of the current day
 - ✅ Derives accumulated fields (openPrice, minPrice, maxPrice, avgPrice, volume, transactions)
 - ✅ Converts COT time labels (UTC-5) to UTC timestamps
 - ✅ Converts ICAP "Miles USD" amounts to USD (× 1000)
@@ -263,8 +267,6 @@ tsx scripts/backfill-dolar.ts 2025-01-01 2025-03-31
 ```bash
 MONGODB_URI=mongodb://localhost:27017 \
 MONGODB_DB_NAME=dolar-realtime \
-ICAP_API_BASE_URL=https://proxy.set-icap.com/seticap/api \
-ICAP_API_TOKEN=your-token \
 node scripts/backfill-dolar.js 2025-01-01 2025-06-30
 ```
 
@@ -278,8 +280,6 @@ node scripts/backfill-dolar.js 2025-01-01 2025-06-30
 2. **Environment variables**:
    - `MONGODB_URI` — Default: `mongodb://localhost:27017`
    - `MONGODB_DB_NAME` — Default: `dolar-realtime`
-   - `ICAP_API_BASE_URL` — Default: `https://proxy.set-icap.com/seticap/api`
-   - `ICAP_API_TOKEN` — Required for authenticated ICAP access
 
 ### Expected Output
 
@@ -349,7 +349,7 @@ The script is safe to re-run:
 Markets are closed on Colombian public holidays. The script logs `no data (holiday or market closed)` and continues.
 
 #### Error: ICAP chart data arrays have mismatched lengths
-The ICAP JSON contained unexpected structure. Check the `ICAP_API_BASE_URL` and token.
+The ICAP JSON contained unexpected structure. Run `ICAP_LIVE=1 npm test` to check the live endpoint.
 
 #### Error: Cannot connect to MongoDB
 Start MongoDB as shown in Prerequisites.
