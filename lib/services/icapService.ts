@@ -14,11 +14,24 @@ interface ICAPSnapshotMessage {
   result?: unknown;
 }
 
+/** YYYY-MM-DD in Colombia time, whatever the machine's timezone. */
+function colombiaDate(date: Date): string {
+  return date.toLocaleDateString('en-CA', { timeZone: COLOMBIA_TIMEZONE });
+}
+
 /**
  * Fetch the snapshot and return a lookup of its messages by id.
  */
 async function fetchSnapshot(): Promise<(id: number) => ICAPSnapshotMessage> {
   const response = await axios.get(ICAP_SNAPSHOT_URL);
+
+  // The request carries no date. A snapshot ICAP has not refreshed today still holds a
+  // previous day's figures, and they would be stored under today's date.
+  const updatedAt = response.data?.updated_at;
+  if (updatedAt && colombiaDate(new Date(updatedAt)) !== colombiaDate(new Date())) {
+    throw new Error(`ICAP snapshot was last updated ${updatedAt}, not today`);
+  }
+
   const messages: ICAPSnapshotMessage[] = response.data?.messages ?? [];
 
   return (id) => {
@@ -93,7 +106,7 @@ export interface ICAPIntradayPoint {
  */
 export async function fetchIntradayChartData(date: string): Promise<ICAPIntradayPoint[]> {
   // The snapshot takes no date: asking for another day would return today's ticks under the wrong date.
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: COLOMBIA_TIMEZONE });
+  const today = colombiaDate(new Date());
   if (date !== today) {
     throw new Error(`ICAP only serves the current day (${today}); cannot fetch ${date}`);
   }

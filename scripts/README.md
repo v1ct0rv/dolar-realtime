@@ -227,6 +227,8 @@ The `backfill-dolar.ts` script fetches the current day's intraday price and volu
 **Data Source:** ICAP public snapshot (chart message `1000`) — the same request used by the live cron job.
 
 > Since 2026-11-14 ICAP only serves **the current day** (Colombia time). Any other date fails with `ICAP only serves the current day`, so run this the same day you need to recover.
+>
+> The chart only carries transactional trades. Backfilled ticks therefore have a lower running `volume` and `transactions` than the ticks the live cron stores, which come from ICAP's totals. Prices are unaffected.
 
 ### Features
 

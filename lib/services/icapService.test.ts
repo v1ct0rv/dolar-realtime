@@ -17,7 +17,7 @@ interface Message {
   data?: Record<string, unknown>;
   result?: { datos_grafico_moneda_mercado: string }[];
 }
-type Snapshot = { messages: Message[] };
+type Snapshot = { messages: Message[]; updated_at?: string };
 
 /** A deep copy of the fixture, so each test can break it its own way. */
 function snapshot(): Snapshot {
@@ -84,6 +84,20 @@ test('fetchAllCurrentStats names the missing message', async () => {
   stubNetwork(renumbered);
 
   await assert.rejects(fetchAllCurrentStats(), /1006/);
+});
+
+test('fetchAllCurrentStats rejects a snapshot ICAP has not refreshed today', async () => {
+  // Without ICAP's daily reset the snapshot still holds the previous close,
+  // which the cron would store under today's date.
+  stubNetwork({ ...snapshot(), updated_at: '2026-11-20T18:00:00Z' });
+
+  await assert.rejects(fetchAllCurrentStats(), /not today/);
+});
+
+test('fetchAllCurrentStats accepts a snapshot refreshed today', async () => {
+  stubNetwork({ ...snapshot(), updated_at: new Date().toISOString() });
+
+  assert.equal((await fetchAllCurrentStats()).time, '11:12:55');
 });
 
 test('fetchIntradayChartData parses the chart for today', async () => {

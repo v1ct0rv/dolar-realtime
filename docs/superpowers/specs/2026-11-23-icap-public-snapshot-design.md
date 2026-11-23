@@ -78,6 +78,10 @@ The request takes no date. The snapshot is always "today".
   1005. Its return value is unchanged, so `app/api/cron/collect-data/route.ts`
   only loses the date argument.
 - The three per-endpoint fetchers are removed; nothing else calls them.
+- Because the request carries no date, the service rejects a snapshot whose
+  `updated_at` is not today in Colombia time. Otherwise a snapshot ICAP failed
+  to reset overnight would be stored as today's data. A snapshot without
+  `updated_at` is accepted.
 - `fetchIntradayChartData(date)` picks message 1000 and keeps the existing
   regex parser. It rejects any date other than today (Colombia time), because
   the snapshot cannot serve another day.
@@ -112,4 +116,10 @@ The request takes no date. The snapshot is always "today".
 - `ICAP_API_BASE_URL` and `ICAP_API_TOKEN` in the `dolar-v2` app settings are
   now unused and can be deleted.
 - Today's ticks from before the deploy can be recovered the same day with
-  `npm run backfill-dolar <today>`.
+  `npm run backfill-dolar <today>`, with a caveat: the chart only carries
+  transactional trades, so backfilled ticks have a lower running volume and
+  transaction count than the ticks the cron stores from the totals message
+  (about 40% lower in volume on 2026-11-23). Prices are unaffected.
+- The cron's guard only checks `time`. If ICAP ever fills the average/close
+  message before the price and volume ones, `NaN` values could be inserted.
+  Not observed, and the same was possible with the old three requests.
