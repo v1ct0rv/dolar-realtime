@@ -27,6 +27,7 @@ built-in test runner.
 - Prices and percentages are rounded to 2 decimals on output. Candidates are compared on the unrounded change; ties go
   to the earlier point.
 - A headline whose link does not start with `https://` is dropped.
+- A headline whose title does not match `/petr[oó]leo|brent|crudo|wti|opep/i` is dropped.
 - No new dependencies, no environment variables, no MongoDB.
 - No added line over 120 columns (a commit hook rejects them).
 - User-facing copy is in Spanish, as in the rest of both apps.
@@ -313,7 +314,8 @@ A `'use client'` component:
   nothing.
 - A card styled like the intraday chart's card. Header: `Petróleo Brent`, a link `finance.yahoo.com · BZ=F` to
   `https://finance.yahoo.com/quote/BZ=F/`, the price as `US$ 86,72`, and the change against `previousClose` as
-  `▼ −3,23 (−3,59 %)` in `--clr-negative`, or `▲ +…` in `--clr-positive`. Numbers use `es-CO` with 2 decimals.
+  `▼ −3,23 (−3,59 %)` in `--clr-negative`, or `▲ +…` in `--clr-positive`, with the reference shown beside it as
+  `Cierre anterior US$ 89,95`. Numbers use `es-CO` with 2 decimals.
 - A Recharts `ComposedChart`, height 300, with the same axes, grid and gradient treatment as the intraday chart: one
   `Area` for the price in `ch.gold`, a tooltip with the time (`HH:mm`) and the price, and one `ReferenceDot` per
   move at `x={move.timestamp} y={move.price}` labelled with its number (1, 2, …).

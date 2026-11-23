@@ -106,7 +106,11 @@ compared on the unrounded change, and a tie goes to the earlier point.
 1. Parse the feed's items. Strip the trailing ` - <source name>` from the
    title, decode `&amp; &lt; &gt; &quot; &#39;`, and drop any item whose link
    does not start with `https://` or whose date does not parse.
-2. Going through the moves strongest first, give each the unused headline
+2. Drop any item whose title names none of petróleo, Brent, crudo, WTI or
+   OPEP. The search also returns articles that only mention Brent in passing:
+   on the first live run a stock-market wrap about the Ibex 35 was the nearest
+   headline to a 1.5 % drop.
+3. Going through the moves strongest first, give each the unused headline
    published closest to it, within 60 minutes either side. A headline is used
    once. A move with none in range keeps its marker and shows only the change.
 
@@ -200,7 +204,16 @@ compared on the unrounded change, and a tie goes to the earlier point.
 - **Azure addresses may be refused.** Checked on the pull request's preview
   for the new app, and only after deploy for the legacy one.
 - **Prices are delayed** by about ten minutes, as Yahoo serves futures.
-- **A headline can be unrelated.** The match is by time only.
+- **A headline can be unrelated.** The match is by time, among headlines whose
+  title names oil.
+- **The previous close moves in the evening.** Yahoo's previous close is the
+  last settlement. Once the day's settlement is published (seen between 22:37
+  and 22:53 UTC on 2026-11-23, about 17:45 in Bogotá) it becomes that day's
+  own close, while the chart still shows the day until midnight New York
+  time. In those hours the header reads the change since the close (+0.05 %
+  that evening) above a chart of the day (−3.6 %). Both apps show the
+  previous close they compare against, so the reference is visible. During
+  Colombian market hours the two agree.
 
 ## Calls made while writing this
 

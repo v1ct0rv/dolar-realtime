@@ -164,6 +164,29 @@ export interface TRMHistoryReport {
   dailyData: TRMHistoryDayData[];
 }
 
+// Brent oil types. Timestamps are epoch milliseconds.
+export interface OilHeadline {
+  title: string;
+  url: string;
+  source: string;
+  publishedAt: number;
+}
+
+/** A point where Brent moved sharply against its price 30 minutes earlier. */
+export interface OilMove {
+  timestamp: number;
+  price: number;
+  changePercent: number;
+  headline?: OilHeadline; // the one published closest to the move, if any was near
+}
+
+export interface BrentOilData {
+  price: number;
+  previousClose: number;
+  points: [number, number][]; // [timestamp, price]
+  moves: OilMove[];
+}
+
 // API Response types
 export interface ApiResponse<T> {
   success: boolean;
