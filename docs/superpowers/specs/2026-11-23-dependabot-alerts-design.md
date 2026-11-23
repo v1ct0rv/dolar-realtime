@@ -40,19 +40,24 @@ the alerts now need 16.4.5.
 
 ## Root app (`package.json`, `package-lock.json`)
 
-A lockfile refresh inside the existing ranges clears every alert but one. Tried
-on a scratch copy: `npm audit` goes from 19 findings (1 critical, 13 high) to
-the single minimatch chain.
+Update only the packages the alerts name, with `npm update <names>`. A blanket
+`npm update` was tried first and rejected: it also moves `eslint-config-next`
+to 16.4.6, whose React-hooks rules report four new lint errors, and `recharts`
+to 3.11, whose tooltip types break the build in four places. No alert needs
+either, so both stay at their locked versions.
 
 - Raise the floors of the direct dependencies that have alerts, so the manifest
-  itself excludes the vulnerable versions: `next` and `eslint-config-next` to
-  `^16.4.6`, `axios` to `^1.21.1`, `postcss` to `^8.5.33`.
+  itself excludes the vulnerable versions: `next` to `^16.4.6`, `axios` to
+  `^1.21.1`, `postcss` to `^8.5.33`.
 - `overrides.minimatch` moves from `^10.2.1` to `^11.0.1`. Alert 289 covers
   `>= 7.0.0, < 11.0.1`; the 10.x line has no patched release. minimatch 11 needs
   Node 20 or 22+, which Next.js 16 already requires.
-- Everything else (sharp 0.35.5, nanoid, js-yaml, brace-expansion, form-data,
-  follow-redirects, flatted, esbuild and the rest) is transitive and comes with
-  the refresh.
+- The transitive packages are updated by name: sharp, nanoid, js-yaml,
+  brace-expansion, picomatch, flatted, form-data, follow-redirects,
+  browserslist, baseline-browser-mapping, source-map-js, `@babel/core`,
+  `@humanfs/node`, and esbuild (which needs `tsx` updated with it).
+- `zod` is updated as well. It has no Dependabot alert, but `npm audit` reports
+  a high-severity advisory for the locked 4.3.6.
 
 ## Legacy app (`legacy/`)
 
@@ -64,7 +69,7 @@ In-major bumps clear most of it:
 | `body-parser` | `~1.13.2` | `^1.20.9` |
 | `cookie-parser` | `~1.3.5` | `^1.4.7` |
 | `axios` | `^0.21.1` | `^1.21.1` (same line as the root app) |
-| `lodash`, `morgan`, `debug`, `node-schedule`, `express-http-proxy` | unchanged ranges | lockfile refresh |
+| `morgan`, `debug`, `node-schedule`, `express-http-proxy` | unchanged ranges | lockfile refresh |
 
 Three packages cannot be bumped:
 
@@ -73,7 +78,8 @@ Three packages cannot be bumped:
   that would run it are commented out. Delete the function,
   the two commented-out lines that mention it, and the dependency.
   `worker.data.oilStats` stays `{}` and `/investing/brentOil` keeps answering
-  `{}`, because the page still calls it.
+  `{}`, because the page still calls it. `lodash` goes with it: that function
+  was its only user.
 - **`serve-favicon`** is required in `legacy/app.js` and never used (the
   `app.use` line is commented out; `express.static` already serves
   `public/favicon.ico`). Delete the require and the dependency.
