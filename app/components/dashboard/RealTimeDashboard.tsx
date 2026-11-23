@@ -15,7 +15,8 @@ import {
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useTheme } from '../ThemeProvider';
-import BrentOilChart from './BrentOilChart';
+import BrentOilChart, { INTRADAY_SYNC_ID } from './BrentOilChart';
+import { syncByNearestTime } from '@/lib/utils/nearestTick';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const getTodayColombiaDate = () =>
@@ -50,7 +51,7 @@ const lightChart = {
 type Trend = 'up' | 'down' | 'equal';
 
 // ─── Chart tooltip ────────────────────────────────────────────────────────────
-interface TooltipEntry { dataKey?: string; value?: number | string; }
+interface TooltipEntry { dataKey?: string; value?: number | string; payload?: { timestamp?: number }; }
 interface ChartTooltipProps {
   active?: boolean;
   payload?: readonly TooltipEntry[];
@@ -60,7 +61,8 @@ interface ChartTooltipProps {
 
 function ChartTooltip({ active, payload, label, ch }: ChartTooltipProps) {
   if (!active || !payload || payload.length === 0) return null;
-  const date = new Date(label as number);
+  // The point's own time: while the Brent chart is hovered, `label` is that chart's.
+  const date = new Date(payload[0].payload?.timestamp ?? (label as number));
   const precioEntry = payload.find((p) => p.dataKey === 'precio');
   const montoEntry = payload.find((p) => p.dataKey === 'monto');
 
@@ -363,7 +365,13 @@ export default function RealTimeDashboard() {
             </div>
 
             <ResponsiveContainer width="100%" height={420}>
-              <ComposedChart data={chartDataTransformed} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+              <ComposedChart
+                data={chartDataTransformed}
+                margin={{ top: 10, right: 16, left: 0, bottom: 0 }}
+                // Hovering here shows the same moment on the Brent chart below, and back.
+                syncId={INTRADAY_SYNC_ID}
+                syncMethod={syncByNearestTime}
+              >
                 <defs>
                   <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={ch.gold} stopOpacity={0.22} />

@@ -14,6 +14,10 @@ import {
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { BrentOilData } from '@/types';
+import { syncByNearestTime } from '@/lib/utils/nearestTick';
+
+/** The dollar's intraday chart and this one share it, so hovering either shows the same moment on both. */
+export const INTRADAY_SYNC_ID = 'intraday';
 
 /** The part of the dashboard's chart colour map this chart uses. */
 export interface ChartColors {
@@ -44,7 +48,7 @@ const HEADLINE_CELL = 'col-start-2 col-span-2 sm:col-start-auto sm:col-span-1';
 
 interface OilTooltipProps {
   active?: boolean;
-  payload?: readonly { value?: number | string }[];
+  payload?: readonly { value?: number | string; payload?: { timestamp?: number } }[];
   label?: string | number;
   ch: ChartColors;
 }
@@ -63,7 +67,8 @@ function OilTooltip({ active, payload, label, ch }: OilTooltipProps) {
       }}
     >
       <p style={{ ...mono, color: ch.tick, fontSize: 11, letterSpacing: '0.06em', marginBottom: 6 }}>
-        {format(new Date(label as number), 'HH:mm')}
+        {/* The point's own time: while the dollar chart is hovered, `label` is that chart's. */}
+        {format(new Date(payload[0].payload?.timestamp ?? (label as number)), 'HH:mm')}
       </p>
       <p style={{ ...mono, color: 'var(--clr-text)', fontSize: 16, fontWeight: 500 }}>
         US$ {twoDecimals(payload[0].value as number)}
@@ -177,7 +182,12 @@ export default function BrentOilChart({ ch }: { ch: ChartColors }) {
       </div>
 
       <ResponsiveContainer width="100%" height={300}>
-        <ComposedChart data={data} margin={{ top: 14, right: 16, left: 0, bottom: 0 }}>
+        <ComposedChart
+          data={data}
+          margin={{ top: 14, right: 16, left: 0, bottom: 0 }}
+          syncId={INTRADAY_SYNC_ID}
+          syncMethod={syncByNearestTime}
+        >
           <defs>
             <linearGradient id="brentGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={ch.gold} stopOpacity={0.22} />
