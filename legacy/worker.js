@@ -31,12 +31,18 @@ const OIL_NEWS_URL =
 
 // A move is a change of OIL_MOVE_THRESHOLD_PCT or more against the price one window earlier.
 const OIL_MOVE_WINDOW_MS = 30 * 60000;
+// The price a point is compared with may be this much older at most. The futures stop
+// for an hour every day, and a change across that break is not a 30-minute move; 45
+// minutes still allows for the few points Yahoo leaves out inside a session.
+const OIL_MAX_REFERENCE_AGE_MS = 45 * 60000;
 const OIL_MOVE_THRESHOLD_PCT = 0.75;
 const OIL_MAX_MOVES = 5;
 const OIL_HEADLINE_RANGE_MS = 60 * 60000;
 
 // The search also returns articles that only mention Brent in passing.
-const OIL_TITLE = /petr[oó]leo|brent|crudo|wti|opep/i;
+// Whole words, so "Brentford" does not count, and checked once the outlet's name
+// is off the title, so an outlet called "Crudo ..." does not either.
+const OIL_TITLE = /\b(?:petr[oó]leos?|brent|crudos?|wti|opep)\b/i;
 
 const OIL_REQUEST = { timeout: 10000, maxContentLength: 2 * 1024 * 1024 };
 
@@ -74,12 +80,20 @@ function xmlTag(xml, name) {
 }
 
 // &amp; goes last, so &amp;lt; decodes to the text &lt; and not to <.
+// A numeric entity as its character, or as it was written when the number is not a character.
+function fromCodePoint(entity, code) {
+  const valid = code > 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff);
+  return valid ? String.fromCodePoint(code) : entity;
+}
+
 function decodeEntities(text) {
   return text
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (entity, digits) => fromCodePoint(entity, Number(digits)))
+    .replace(/&#x([0-9a-f]+);/gi, (entity, hex) => fromCodePoint(entity, parseInt(hex, 16)))
     .replace(/&amp;/g, "&");
 }
 
@@ -94,11 +108,12 @@ function parseOilNews(xml) {
     const publishedAt = Date.parse(xmlTag(item, "pubDate"));
     let title = decodeEntities(xmlTag(item, "title"));
 
+    // Google appends the outlet to every title. It comes off before the title is
+    // judged: the outlet's name says nothing about the article.
+    if (source && title.endsWith(" - " + source)) title = title.slice(0, -(source.length + 3));
+
     // The link ends up in an href, so only https is let through.
     if (!OIL_TITLE.test(title) || !url.startsWith("https://") || Number.isNaN(publishedAt)) return;
-
-    // Google appends the outlet to every title.
-    if (source && title.endsWith(" - " + source)) title = title.slice(0, -(source.length + 3));
 
     headlines.push({ title, url, source, publishedAt });
   });
@@ -119,6 +134,7 @@ function detectOilMoves(points) {
     const olderTime = points[older][0];
     const olderPrice = points[older][1];
     if (olderTime > timestamp - OIL_MOVE_WINDOW_MS || olderPrice <= 0) continue;
+    if (olderTime < timestamp - OIL_MAX_REFERENCE_AGE_MS) continue; // across a gap
 
     const change = ((price - olderPrice) / olderPrice) * 100;
     if (Math.abs(change) >= OIL_MOVE_THRESHOLD_PCT) candidates.push({ timestamp, price, change });

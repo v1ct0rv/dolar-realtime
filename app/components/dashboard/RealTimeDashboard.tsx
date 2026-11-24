@@ -21,12 +21,10 @@ import { useTheme } from '../ThemeProvider';
 import BrentOilChart, { INTRADAY_SYNC_ID } from './BrentOilChart';
 import { syncByNearestTime } from '@/lib/utils/nearestTick';
 import { baselineSplit } from '@/lib/utils/baselineSplit';
+import { toColombiaDateString } from '@/lib/utils/timezone';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const getTodayColombiaDate = () =>
-  new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }))
-    .toISOString()
-    .split('T')[0];
+const getTodayColombiaDate = () => toColombiaDateString(new Date());
 
 // ─── Chart color maps (hex values for Recharts SVG props) ─────────────────────
 const darkChart = {
@@ -338,9 +336,7 @@ export default function RealTimeDashboard() {
 
         {/* ── Yesterday notice ── */}
         {dataDate && (() => {
-          const nowUTC = new Date();
-          const colombiaDate = new Date(nowUTC.toLocaleString('en-US', { timeZone: 'America/Bogota' })).toISOString().split('T')[0];
-          if (dataDate === colombiaDate) return null;
+          if (dataDate === getTodayColombiaDate()) return null;
           return (
             <div
               role="status"

@@ -44,8 +44,10 @@ export function isMarketHours(date?: Date): boolean {
  * Format date to Colombia date string (YYYY-MM-DD)
  */
 export function toColombiaDateString(date: Date): string {
-  const colombiaTime = toColombiaTime(date);
-  return colombiaTime.toISOString().split('T')[0];
+  // Formatted in the zone itself. Going through toColombiaTime and toISOString reads
+  // the wall-clock time back as UTC, which is tomorrow's date from 19:00 on any
+  // machine that is not on UTC. (en-CA writes dates as YYYY-MM-DD.)
+  return date.toLocaleDateString('en-CA', { timeZone: COLOMBIA_TIMEZONE });
 }
 
 /**

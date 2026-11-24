@@ -96,7 +96,7 @@ test('parseNews strips the source, decodes entities and drops unusable items', (
       publishedAt: Date.UTC(2026, 10, 23, 5, 58),
     },
     {
-      title: 'Petróleo & gas: <b>rebote</b> del crudo',
+      title: 'Petróleo & gas: <b>rebote</b> del crudo — l\'OPEP ’sube’',
       source: 'La República',
       url: 'https://news.google.com/rss/articles/B?oc=5',
       publishedAt: Date.UTC(2026, 10, 23, 6, 40),
@@ -108,6 +108,37 @@ test('parseNews strips the source, decodes entities and drops unusable items', (
       publishedAt: Date.UTC(2026, 10, 23, 9, 30),
     },
   ]);
+});
+
+/** A feed with one item, the way Google News writes them. */
+const feedOf = (title: string, source: string) =>
+  `<rss><channel><item><title>${title}</title><link>https://news.google.com/rss/articles/X</link>` +
+  `<pubDate>Mon, 23 Nov 2026 06:00:00 GMT</pubDate><source url="https://example.com">${source}</source>` +
+  '</item></channel></rss>';
+
+test('parseNews leaves an entity that is not a character as it is', () => {
+  const [headline] = parseNews(feedOf('Crudo &#99999999; &#xD800; sube - Fuente', 'Fuente'));
+  assert.equal(headline.title, 'Crudo &#99999999; &#xD800; sube');
+});
+
+test('parseNews decodes &amp; last, so an escaped entity stays text', () => {
+  const [headline] = parseNews(feedOf('Brent &amp;#39;estable&amp;#39; - Fuente', 'Fuente'));
+  assert.equal(headline.title, 'Brent &#39;estable&#39;');
+});
+
+test('parseNews keeps a title that names oil once its outlet is removed', () => {
+  const [headline] = parseNews(feedOf('Crudo Transparente - Crudo Transparente', 'Crudo Transparente'));
+  assert.equal(headline.title, 'Crudo Transparente');
+});
+
+test('detectMoves ignores a change measured across a gap', () => {
+  const minute = 60_000;
+  const flat = [0, 5, 10, 15, 20, 25, 30].map((m) => [m * minute, 100] as [number, number]);
+
+  // The futures' daily break: the reference is 70 minutes older, so there is no 30-minute change.
+  assert.deepEqual(detectMoves([...flat, [100 * minute, 98]]), []);
+  // A reference exactly 45 minutes older still counts.
+  assert.equal(detectMoves([...flat, [75 * minute, 98]]).length, 1);
 });
 
 test('parseNews returns [] for something that is not a feed', () => {

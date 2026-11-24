@@ -87,7 +87,9 @@ chart (loses the link between headline and move).
 
 1. For each price point, take the latest point at least 30 minutes older and
    compute the percentage change between the two. Points in the session's first
-   30 minutes have no change.
+   30 minutes have no change. Neither does a point whose reference is more than
+   45 minutes older, as after the futures' daily one-hour break (added on
+   2026-11-23, see `2026-11-23-pending-fixes-design.md`).
 2. A point is a candidate when the absolute change is 0.75 % or more.
 3. Take candidates strongest first. Keep one unless an already kept move is
    less than 30 minutes away. Stop at 5.
@@ -104,10 +106,12 @@ compared on the unrounded change, and a tie goes to the earlier point.
 **Headlines**
 
 1. Parse the feed's items. Strip the trailing ` - <source name>` from the
-   title, decode `&amp; &lt; &gt; &quot; &#39;`, and drop any item whose link
-   does not start with `https://` or whose date does not parse.
-2. Drop any item whose title names none of petróleo, Brent, crudo, WTI or
-   OPEP. The search also returns articles that only mention Brent in passing:
+   title, decode its entities (`&amp; &lt; &gt; &quot; &apos;` and numeric
+   ones), and drop any item whose link does not start with `https://` or whose
+   date does not parse.
+2. Drop any item whose title, with the source name already off it, names none
+   of petróleo, Brent, crudo, WTI or OPEP as a whole word. The search also
+   returns articles that only mention Brent in passing:
    on the first live run a stock-market wrap about the Ibex 35 was the nearest
    headline to a 1.5 % drop.
 3. Going through the moves strongest first, give each the unused headline
