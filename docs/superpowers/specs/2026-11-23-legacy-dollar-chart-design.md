@@ -83,9 +83,19 @@ moment on the other, and the price in red where it is below the day's opening pr
 - There is no preview environment for this app. The owner sees screenshots of the local page before the
   pull request is merged, and production is checked right after the deploy.
 
+## Added while building
+
+- **The price's green is set explicitly** (`#16a34a`). The plan was to keep "the chart's own price colour",
+  but that colour is Highcharts' second palette entry, which is green only in the dark theme; in the light
+  theme the owner chose it is indigo.
+- **The oil chart's price axis takes its series' blue.** It was written to use the dollar's price colour.
+- **The oil tooltip's time reads `HH:MM`,** like the dollar's, instead of "Monday, Nov 23, 10:00 AM".
+- **The "Fork me on GitHub" ribbon is drawn in CSS.** The owner noticed it broken mid-way: the image it
+  loaded from GitHub's old S3 bucket answers 403. Its link also pointed at the owner's previous user name.
+
 ## Calls made while writing this
 
-- Green above the opening price here (the new app keeps its gold): green is already this chart's price
-  colour, and green over red is what the reference shows.
+- Green above the opening price here (the new app keeps its gold): green over red is what the reference
+  shows, and this chart's price was already green for most readers.
 - The opening price is named in the subtitle rather than on the plot line.
 - The volume columns stay, drawn fainter so the price reads first.

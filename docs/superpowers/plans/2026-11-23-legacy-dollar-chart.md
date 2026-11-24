@@ -18,7 +18,8 @@ on the two chart containers. No change to the worker or its JSON.
 - Theme class, exact, on `body`: `highcharts-light`.
 - Time zone, exact, on both charts: `America/Bogota`.
 - Link limit, exact: 10 minutes.
-- Below the opening price: `#dc2626`. Above it: the chart's own price colour (`Highcharts.getOptions().colors[1]`).
+- Below the opening price: `#dc2626`. Above it: `#16a34a`. (First written as "the chart's own price colour",
+  `Highcharts.getOptions().colors[1]`, which turned out to be green only in Highcharts' dark theme.)
 - Texts, exact: `Hora (Colombia)`, `Precio (COP)`, `Monto (miles USD)`, `Fuente: dolar.set-icap.com`.
 - Listeners go on `#container` and `#container-brent`; charts are looked up when an event fires.
 - No new dependencies. No change to `legacy/worker.js`, the routes, or the new app.
