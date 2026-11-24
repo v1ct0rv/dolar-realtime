@@ -18,7 +18,7 @@ Asked which level to use, the owner chose the opening price, as SET-ICAP does.
 ## Goals
 
 - Wherever the intraday price is below the day's opening price, the line and the fill next to it are red.
-- The opening price is on the chart: a dotted line with its value, and an entry in the legend.
+- The opening price is on the chart: a dotted line, named with its value in the legend.
 
 ## Non-goals
 
@@ -50,9 +50,10 @@ Asked which level to use, the owner chose the opening price, as SET-ICAP does.
   gradients, one for the line and one for the fill, cut at that fraction. Both marks name the gold as
   their fallback paint, so a missing gradient can never make the line disappear.
 - The fill's base is the opening price, kept inside the axis range.
-- A dotted reference line at the level carries the label `APERTURA 3.501,00`.
-- The legend gains `APERTURA 3.501,00` with a dotted swatch and `BAJO LA APERTURA` with a red one. Red
-  comes from the theme's negative colour, in both themes.
+- A dotted reference line marks the level. It carries no label of its own: the price line starts at this
+  level and keeps coming back to it, so a label on the line sat on top of the price wherever it was tried.
+- The legend names it: `APERTURA 3.501,00` with a dotted swatch, and `BAJO LA APERTURA` with a red one.
+  Red comes from the theme's negative colour, in both themes.
 
 ## Testing
 

@@ -53,7 +53,7 @@ Required in `.env.local`:
 - `lib/services/oilService.ts` — Brent oil: today's 5-minute prices from Yahoo Finance (`BZ=F`, unofficial, needs a browser-like `User-Agent`) and headlines from Google News RSS; marks up to 5 sharp moves (0.75 % in 30 min) and gives each the nearest oil headline. Nothing is stored. `legacy/worker.js` carries a copy of the same rule; the shared fixture's calibration day keeps the two in step
 - `app/api/oil/brent/route.ts` — serves it through `getCachedBrentOil`, which keeps the answer (a failure too) in memory for 60s per instance
 
-**Client components** (`'use client'`): `RealTimeDashboard` (auto-refreshes every 10s) with `BrentOilChart` inside it (its own 60s refresh; renders nothing when oil is unavailable; the two charts share a Recharts `syncId` and `syncByNearestTime` from `lib/utils/nearestTick.ts`, so hovering one shows the point nearest in time on the other), `TRMAnalysisDashboard`, `TRMHistoryDashboard`, `HistoricalDashboard`.
+**Client components** (`'use client'`): `RealTimeDashboard` (auto-refreshes every 10s; its price line is gold above the day's opening price and red below it, as on SET-ICAP's chart, through a gradient cut with `baselineSplit` from `lib/utils/baselineSplit.ts`) with `BrentOilChart` inside it (its own 60s refresh; renders nothing when oil is unavailable; the two charts share a Recharts `syncId` and `syncByNearestTime` from `lib/utils/nearestTick.ts`, so hovering one shows the point nearest in time on the other), `TRMAnalysisDashboard`, `TRMHistoryDashboard`, `HistoricalDashboard`.
 
 **Server Components**: all page files under `app/` (use `export const metadata`). Dynamic client components must be wrapped in a Client Component before using `next/dynamic` with `ssr: false`.
 
