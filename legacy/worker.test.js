@@ -86,7 +86,7 @@ test('updateBrentOil fills oilStats in the shape the page reads', async () => {
       text:
         '<b>▲ +1.01% en 30 min</b><br>' +
         '<a href="https://news.google.com/rss/articles/B?oc=5" target="_blank" rel="noopener noreferrer">' +
-        'Petróleo &amp; gas: &lt;b&gt;rebote&lt;/b&gt; del crudo</a> — La República',
+        'Petróleo &amp; gas: &lt;b&gt;rebote&lt;/b&gt; del crudo — l&#39;OPEP ’sube’</a> — La República',
     },
   ]);
 });
@@ -113,6 +113,21 @@ test('updateBrentOil shows moves without headlines when the news fails', async (
     worker.data.oilStats.events.news.map((flag) => flag.text),
     ['<b>▼ -1.00% en 30 min</b>', '<b>▲ +1.01% en 30 min</b>']
   );
+});
+
+// The futures stop for an hour every day. A change across that break is not a 30-minute move.
+test('updateBrentOil marks nothing across a gap', async () => {
+  const minutes = [0, 5, 10, 15, 20, 25, 30, 100];
+  const close = [90, 90, 90, 90, 90, 90, 90, 88.2];
+  const session = structuredClone(oil.chart);
+  session.chart.result[0].timestamp = minutes.map((m) => oil.T0 + m * 60);
+  session.chart.result[0].indicators.quote[0].close = close;
+  stubOil(session, oil.news);
+
+  await worker.updateBrentOil();
+
+  assert.equal(worker.data.oilStats.candles.length, 8);
+  assert.deepEqual(worker.data.oilStats.events.news, []);
 });
 
 test('updateBrentOil finds the 5 moves of the calibration day', async () => {
