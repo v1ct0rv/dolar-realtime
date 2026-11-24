@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint app lib types --ext ts,tsx",
-    "test": "tsx --test lib/services/icapService.test.ts",
+    "test": "tsx --test lib/services/*.test.ts lib/utils/*.test.ts",
     "backfill-trm": "node scripts/backfill-trm.js",
     "backfill-dolar": "tsx scripts/backfill-dolar.ts",
     "remove-duplicates-trmData": "node scripts/remove-duplicates.js trmData",

@@ -11,10 +11,16 @@ import {
   ResponsiveContainer,
   ComposedChart,
   Area,
+  ReferenceLine,
+  usePlotArea,
+  useYAxisDomain,
 } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useTheme } from '../ThemeProvider';
+import BrentOilChart, { INTRADAY_SYNC_ID } from './BrentOilChart';
+import { syncByNearestTime } from '@/lib/utils/nearestTick';
+import { baselineSplit } from '@/lib/utils/baselineSplit';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const getTodayColombiaDate = () =>
@@ -28,6 +34,7 @@ const darkChart = {
   goldFill: 'rgba(212,146,42,0.22)',
   blue: '#3a6fef',
   blueFill: 'rgba(58,111,239,0.55)',
+  red: '#ef4444', // --clr-negative
   grid: 'rgba(20,31,51,0.9)',
   tick: '#7a9ab8',
   cardBg: '#141d30',
@@ -39,6 +46,7 @@ const lightChart = {
   goldFill: 'rgba(168,98,12,0.15)',
   blue: '#1842c0',
   blueFill: 'rgba(24,66,192,0.45)',
+  red: '#b91c1c', // --clr-negative
   grid: 'rgba(210,190,160,0.55)',
   tick: '#9a8060',
   cardBg: '#fdf8ef',
@@ -48,8 +56,50 @@ const lightChart = {
 
 type Trend = 'up' | 'down' | 'equal';
 
+const LEGEND_ITEM = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 11,
+  color: 'var(--clr-muted)',
+  letterSpacing: '0.1em',
+} as const;
+
+const twoDecimals = (n: number) =>
+  n.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// ─── Price colour split ───
+/**
+ * The gradients that paint the price gold above the day's opening price and red
+ * below it, as SET-ICAP's own chart does. They are defined in chart coordinates
+ * across the whole plot, so the line and the fill are cut at exactly the same
+ * height whatever their own shapes. Must be rendered inside the chart.
+ */
+function OpenSplitGradients({ open, ch }: { open: number; ch: typeof darkChart }) {
+  const plot = usePlotArea();
+  const domain = useYAxisDomain('right');
+  if (!plot || !domain || domain.length < 2) return null;
+
+  const split = baselineSplit(Number(domain[0]), Number(domain[domain.length - 1]), open);
+  const span = { gradientUnits: 'userSpaceOnUse', x1: 0, x2: 0, y1: plot.y, y2: plot.y + plot.height } as const;
+
+  return (
+    <defs>
+      <linearGradient id="openSplitStroke" {...span}>
+        <stop offset={split} stopColor={ch.gold} />
+        <stop offset={split} stopColor={ch.red} />
+      </linearGradient>
+      {/* Strongest far from the opening price, fading towards it from both sides. */}
+      <linearGradient id="openSplitFill" {...span}>
+        <stop offset={0} stopColor={ch.gold} stopOpacity={0.26} />
+        <stop offset={split} stopColor={ch.gold} stopOpacity={0.03} />
+        <stop offset={split} stopColor={ch.red} stopOpacity={0.03} />
+        <stop offset={1} stopColor={ch.red} stopOpacity={0.3} />
+      </linearGradient>
+    </defs>
+  );
+}
+
 // ─── Chart tooltip ────────────────────────────────────────────────────────────
-interface TooltipEntry { dataKey?: string; value?: number | string; }
+interface TooltipEntry { dataKey?: string; value?: number | string; payload?: { timestamp?: number }; }
 interface ChartTooltipProps {
   active?: boolean;
   payload?: readonly TooltipEntry[];
@@ -59,7 +109,8 @@ interface ChartTooltipProps {
 
 function ChartTooltip({ active, payload, label, ch }: ChartTooltipProps) {
   if (!active || !payload || payload.length === 0) return null;
-  const date = new Date(label as number);
+  // The point's own time: while the Brent chart is hovered, `label` is that chart's.
+  const date = new Date(payload[0].payload?.timestamp ?? (label as number));
   const precioEntry = payload.find((p) => p.dataKey === 'precio');
   const montoEntry = payload.find((p) => p.dataKey === 'monto');
 
@@ -201,6 +252,14 @@ export default function RealTimeDashboard() {
     const hi = Math.max(...prices);
     const pad = Math.max((hi - lo) * 0.3, 5);
     return [Math.floor(lo - pad), Math.ceil(hi + pad)] as [number, number];
+  })();
+
+  // The day's opening price, when there is one: the level the price line is coloured against.
+  // `base` is where the fill starts, kept inside the axis so nothing is drawn outside the plot.
+  const openLine = (() => {
+    const [min, max] = priceDomain;
+    if (!(stats.openPrice > 0) || typeof min !== 'number' || typeof max !== 'number') return null;
+    return { value: stats.openPrice, base: Math.min(Math.max(stats.openPrice, min), max) };
   })();
 
   const priceTrend: Trend =
@@ -349,11 +408,25 @@ export default function RealTimeDashboard() {
                 </a>
               </div>
 
-              <div className="flex items-center gap-5">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
                 <span className="flex items-center gap-2" style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--clr-muted)', letterSpacing: '0.1em' }}>
                   <span style={{ display: 'inline-block', width: 22, height: 2, background: ch.gold, borderRadius: 1 }} />
                   PRECIO
                 </span>
+                {openLine && (
+                  <>
+                    <span className="flex items-center gap-2" style={LEGEND_ITEM}>
+                      <span
+                        style={{ display: 'inline-block', width: 22, height: 2, background: ch.red, borderRadius: 1 }}
+                      />
+                      BAJO LA APERTURA
+                    </span>
+                    <span className="flex items-center gap-2" style={LEGEND_ITEM}>
+                      <span style={{ display: 'inline-block', width: 22, borderTop: `2px dotted ${ch.tick}` }} />
+                      APERTURA {twoDecimals(openLine.value)}
+                    </span>
+                  </>
+                )}
                 <span className="flex items-center gap-2" style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--clr-muted)', letterSpacing: '0.1em' }}>
                   <span style={{ display: 'inline-block', width: 12, height: 10, background: ch.blue, borderRadius: 2, opacity: 0.6 }} />
                   MONTO
@@ -362,7 +435,13 @@ export default function RealTimeDashboard() {
             </div>
 
             <ResponsiveContainer width="100%" height={420}>
-              <ComposedChart data={chartDataTransformed} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+              <ComposedChart
+                data={chartDataTransformed}
+                margin={{ top: 10, right: 16, left: 0, bottom: 0 }}
+                // Hovering here shows the same moment on the Brent chart below, and back.
+                syncId={INTRADAY_SYNC_ID}
+                syncMethod={syncByNearestTime}
+              >
                 <defs>
                   <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={ch.gold} stopOpacity={0.22} />
@@ -409,21 +488,34 @@ export default function RealTimeDashboard() {
                 />
 
                 <Bar yAxisId="left" dataKey="monto" fill="url(#barGradient)" name="Monto" radius={[3, 3, 0, 0]} />
+                {/* With an opening price the line is cut in two colours at it and the fill runs
+                    between the line and that level. The gold after each url() is the fallback
+                    paint: a gradient that is not there must never make the line disappear. */}
+                {openLine && <OpenSplitGradients open={openLine.value} ch={ch} />}
                 <Area
                   yAxisId="right"
                   type="monotone"
                   dataKey="precio"
-                  stroke={ch.gold}
+                  stroke={openLine ? `url(#openSplitStroke) ${ch.gold}` : ch.gold}
                   strokeWidth={2}
-                  fill="url(#priceGradient)"
+                  fill={openLine ? `url(#openSplitFill) ${ch.gold}` : 'url(#priceGradient)'}
+                  baseValue={openLine?.base}
                   name="Precio"
                   dot={false}
                   activeDot={{ stroke: ch.gold, fill: ch.cardBg, strokeWidth: 2, r: 5 }}
                 />
+                {/* Named and valued in the legend. A label on the line itself sat on top of the
+                    price: the line starts at this level and keeps coming back to it. */}
+                {openLine && (
+                  <ReferenceLine yAxisId="right" y={openLine.value} stroke={ch.tick} strokeDasharray="2 4" />
+                )}
               </ComposedChart>
             </ResponsiveContainer>
           </div>
         )}
+
+        {/* ── Brent oil ── */}
+        <BrentOilChart ch={ch} />
       </div>
     </div>
   );
